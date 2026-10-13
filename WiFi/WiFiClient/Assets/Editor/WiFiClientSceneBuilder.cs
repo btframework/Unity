@@ -10,7 +10,7 @@ public static class WiFiClientSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 879 ? 619. Ћог добавим ниже, поэтому canvas выше.
+    // ClientSize = 879 x 619. We add the log below, so the canvas is taller.
     private const float CanvasW = 899f;
     private const float CanvasH = 760f;
 
@@ -37,7 +37,7 @@ public static class WiFiClientSceneBuilder
         var root = canvasGO.transform;
 
         // ============================================================
-        //  Row 1 Ч client / interfaces / IP
+        //  Row 1 - client / interfaces / IP
         // ============================================================
         var btOpen          = MakeButton("BtOpen",          "Open",          root, 12,  12, 75,  23);
         var btClose         = MakeButton("BtClose",         "Close",         root, 93,  12, 75,  23);
@@ -57,7 +57,7 @@ public static class WiFiClientSceneBuilder
         var btEnumSecondaryIfs = MakeButton("BtEnumSecondaryIfs", "Enum sec. interfaces",root, 751, 41, 116, 23);
 
         // ============================================================
-        //  Interfaces table (12, 70) 855?86, колонки 350 | 350 | 100
+        //  Interfaces table (12, 70) 855x86, columns 350 | 350 | 100
         // ============================================================
         var ifaceWidths  = new[] { 350f, 350f, 100f };
         var ifaceHeaders = new[] { "Interface ID", "Description", "Primary" };
@@ -79,7 +79,7 @@ public static class WiFiClientSceneBuilder
         var edScanSsid     = MakeInputField("EdScanSsid", root, 545, 162, 184, 20, "");
 
         // ============================================================
-        //  Networks table (12, 189) 855?76, 13 колонок ? 100
+        //  Networks table (12, 189) 855x76, 13 columns x 100
         // ============================================================
         var netWidths  = new float[13];
         for (int i = 0; i < netWidths.Length; i++) netWidths[i] = 100f;
@@ -106,7 +106,7 @@ public static class WiFiClientSceneBuilder
             new[] { "bssInfrastructure", "bssIndependent", "bssAny" });
 
         // ============================================================
-        //  BSS table (12, 300) 855?76, 14 колонок ? 100
+        //  BSS table (12, 300) 855x76, 14 columns x 100
         // ============================================================
         var bssWidths  = new float[14];
         for (int i = 0; i < bssWidths.Length; i++) bssWidths[i] = 100f;
@@ -136,7 +136,7 @@ public static class WiFiClientSceneBuilder
         var btEditUi          = MakeButton("BtEditUi",         "Show Edit UI",    root, 782, 382, 85,  23);
 
         // ============================================================
-        //  Profiles table (12, 411) 855?76, колонки 200 | 200
+        //  Profiles table (12, 411) 855x76, columns 200 | 200
         // ============================================================
         var profWidths  = new[] { 200f, 200f };
         var profHeaders = new[] { "Name", "Flags" };
@@ -180,7 +180,7 @@ public static class WiFiClientSceneBuilder
         var btSetVirtual       = MakeButton("BtSetVirtual",      "Set \"Virtual station extensibility\"", root, 608, 589, 180, 23);
 
         // ============================================================
-        //  Log (12, 620) 855?130 Ч добавлено ниже оригинала
+        //  Log (12, 620) 855x130 - added below the original
         // ============================================================
         var logScroll  = MakeScrollView("LogScroll", root, 12, 620, 855, 130, false);
         var logContent = logScroll.transform.Find("Viewport/Content");
@@ -288,7 +288,7 @@ public static class WiFiClientSceneBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("? Wi-Fi Client Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Wi-Fi Client Demo UI built using the original layout.");
     }
 
     // ================================================================

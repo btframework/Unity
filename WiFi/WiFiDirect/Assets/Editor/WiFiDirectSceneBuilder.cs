@@ -10,7 +10,7 @@ public static class WiFiDirectSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 484 ? 582
+    // ClientSize = 484 x 582
     private const float CanvasW = 504f;
     private const float CanvasH = 620f;
 
@@ -74,7 +74,7 @@ public static class WiFiDirectSceneBuilder
         var btStop  = MakeButton("BtStop",  "Stop",  root, 93, 141, 75, 23);
 
         // ============================================================
-        //  Devices table (12, 170) 379?171
+        //  Devices table (12, 170) 379x171
         //  135 | 135 | 80
         // ============================================================
         var devWidths  = new[] { 135f, 135f, 80f };
@@ -90,8 +90,8 @@ public static class WiFiDirectSceneBuilder
 
         // ============================================================
         //  Clear + Log
-        //  btClear (397, 318) 75?23
-        //  lbLog   (15, 347) 457?225
+        //  btClear (397, 318) 75x23
+        //  lbLog   (15, 347) 457x225
         // ============================================================
         var btClear = MakeButton("BtClear", "Clear", root, 397, 318, 75, 23);
 
@@ -162,7 +162,7 @@ public static class WiFiDirectSceneBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("? Wi-Fi Direct Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Wi-Fi Direct Demo UI built using the original layout.");
     }
 
     // ================================================================

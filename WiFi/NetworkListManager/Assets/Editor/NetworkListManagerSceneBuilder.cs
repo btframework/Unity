@@ -10,7 +10,7 @@ public static class NetworkListManagerSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 892 ? 540
+    // ClientSize = 892 x 540
     private const float CanvasW = 912f;
     private const float CanvasH = 560f;
 
@@ -54,8 +54,8 @@ public static class NetworkListManagerSceneBuilder
         var btRefresh      = MakeButton("BtRefresh",      "Refresh",       root, 805, 12, 75, 23);
 
         // ============================================================
-        //  Networks table (12, 41) 868?118
-        //  Колонки: 250 | 100 | 100 | 100 | 100 | 100 | 100 | 100 | 80 | 100
+        //  Networks table (12, 41) 868x118
+        //  Columns: 250 | 100 | 100 | 100 | 100 | 100 | 100 | 100 | 80 | 100
         // ============================================================
         var networksWidths = new[] { 250f, 100f, 100f, 100f, 100f, 100f, 100f, 100f, 80f, 100f };
         var networksHeaders = new[]
@@ -97,7 +97,7 @@ public static class NetworkListManagerSceneBuilder
         var btEnumAdapters= MakeButton("BtEnumAdapters","Enum adapters",           root, 373, 203, 87,  23);
 
         // ============================================================
-        //  Connections table (12, 232) 868?106 — 9 колонок (максимум для адаптеров)
+        //  Connections table (12, 232) 868x106 - 9 columns (maximum for adapters)
         //  150 | 150 | 150 | 100 | 200 | 100 | 80 | 150 | 150
         // ============================================================
         var connWidths = new[] { 150f, 150f, 150f, 100f, 200f, 100f, 80f, 150f, 150f };
@@ -115,7 +115,7 @@ public static class NetworkListManagerSceneBuilder
         AddVerticalListGroup(connContent);
 
         // ============================================================
-        //  Events log (12, 373) 868?160 + Clear (805, 344)
+        //  Events log (12, 373) 868x160 + Clear (805, 344)
         // ============================================================
         var eventsScroll  = MakeScrollView("EventsScroll", root, 12, 373, 868, 160);
         var eventsContent = eventsScroll.transform.Find("Viewport/Content");
@@ -169,7 +169,7 @@ public static class NetworkListManagerSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? Network List Manager Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Network List Manager Demo UI built using the original layout.");
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();

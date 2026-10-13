@@ -116,35 +116,35 @@ public static class BluetoothManagerSceneBuilder
         var btDisconnect   = MakeButton("BtDisconnect", "Disconnect", r4.transform, 150, 40);
 
         // ============================================================
-        //  Скролл-таблицы
+        //  Scroll tables
         // ============================================================
-        // Radios (10 колонок)
+        // Radios (10 columns)
         var (radiosScroll, radiosContent) = MakeTable("RadiosScroll", canvasGO.transform,
             new Vector2(20, -220), new Vector2(-20, -100), 420,
             new[] { 100f, 70f, 110f, 90f, 90f, 80f, 90f, 90f, 120f, 120f },
             new[] { "Driver", "Available", "Address", "Connectable", "Discoverable",
                     "HCI ver.", "LMP ver.", "Manufacturer", "Name", "COD" });
 
-        // Devices (8 колонок)
+        // Devices (8 columns)
         var (devicesScroll, devicesContent) = MakeTable("DevicesScroll", canvasGO.transform,
             new Vector2(20, -560), new Vector2(-20, -440), 170,
             new[] { 100f, 110f, 110f, 90f, 120f, 80f, 100f, 100f },
             new[] { "Driver", "Address", "COD", "Device type", "Name",
                     "Paired", "Connected", "Address type" });
 
-        // Services (7 колонок)
+        // Services (7 columns)
         var (servicesScroll, servicesContent) = MakeTable("ServicesScroll", canvasGO.transform,
             new Vector2(20, -740), new Vector2(-20, -620), 150,
             new[] { 100f, 110f, 90f, 400f, 90f, 260f, 140f },
             new[] { "Driver", "Address", "Handle", "UUID", "Channel", "Name", "Comment" });
 
-        // vCOMs (4 колонки)
+        // vCOMs (4 columns)
         var (vcomsScroll, vcomsContent) = MakeTable("VcomsScroll", canvasGO.transform,
             new Vector2(20, -900), new Vector2(-20, -780), 120,
             new[] { 100f, 110f, 400f, 100f },
             new[] { "Driver", "Address", "UUID", "Number" });
 
-        // Events (4 колонки)
+        // Events (4 columns)
         var (eventsScroll, eventsContent) = MakeTable("EventsScroll", canvasGO.transform,
             new Vector2(20, -1030), new Vector2(-20, -920), 140,
             new[] { 100f, 260f, 260f, 500f },
@@ -157,7 +157,7 @@ public static class BluetoothManagerSceneBuilder
         ceRect.anchoredPosition = new Vector2(-20, 20);
 
         // ============================================================
-        //  Prefabs для строк таблиц
+        //  Table row prefabs
         // ============================================================
         var radioRow    = MakeTableRowPrefab("RadioRow",   new[] { 100f, 70f, 110f, 90f, 90f, 80f, 90f, 90f, 120f, 120f });
         var deviceRow   = MakeTableRowPrefab("DeviceRow",  new[] { 100f, 110f, 110f, 90f, 120f, 80f, 100f, 100f });
@@ -166,7 +166,7 @@ public static class BluetoothManagerSceneBuilder
         var eventRow    = MakeTableRowPrefab("EventRow",   new[] { 100f, 260f, 260f, 500f });
 
         // ============================================================
-        //  Модальный confirm
+        //  Confirm dialog
         // ============================================================
         var (confirmPanel, confirmText, confirmYes, confirmNo, confirmCancel) =
             MakeConfirmDialog(canvasGO.transform);
@@ -242,7 +242,7 @@ public static class BluetoothManagerSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? Bluetooth Manager Demo UI собрана. Нажми Play.");
+        Debug.Log("Bluetooth Manager Demo UI built. Press Play.");
     }
 
     // ================================================================

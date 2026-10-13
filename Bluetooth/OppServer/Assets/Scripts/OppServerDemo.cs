@@ -160,8 +160,8 @@ public class OppServerDemo : MonoBehaviour
         var conn = (wclRfCommServerClientConnection)proc.Connection;
         long address = conn.Address;
 
-        // В WinForms-версии тут спрашивали пользователя. В Unity UI блокирующий
-        // диалог из синхронного callback'а невозможен, поэтому используем toggle.
+        // The WinForms version asked the user here. In Unity UI a blocking
+        // dialog from a synchronous callback is not possible, so we use a toggle.
         bool accept = autoAcceptToggle != null && autoAcceptToggle.isOn;
         Trace("Client " + address.ToString("X12") + " requests connection: " + description
               + " > " + (accept ? "Accepted" : "Rejected"));
@@ -228,7 +228,7 @@ public class OppServerDemo : MonoBehaviour
 
     private void ProcOnPutProgress(object sender, uint position, uint length, out bool @continue)
     {
-        // Не логируем каждый прогресс — иначе лог утонет.
+        // Do not log every progress event - otherwise the log will drown.
         @continue = true;
     }
 
@@ -304,7 +304,7 @@ public class OppServerDemo : MonoBehaviour
 
     private void ProcOnProgress(object sender, uint length, uint position)
     {
-        // Прогресс отправки файла клиенту. Логируем редко.
+        // Progress of sending a file to the client. Log rarely.
         if (position == 0 || position == length)
             Trace("Sending file: " + position + " from " + length);
     }

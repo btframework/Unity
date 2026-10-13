@@ -93,7 +93,7 @@ public static class GattServerSceneBuilder
         csr.anchoredPosition = new Vector2(0, -124);
         csr.sizeDelta = new Vector2(-40, 200);
 
-        // Горизонтальный скролл
+        // Horizontal scroll
         var clientsSr = clientsScroll.GetComponent<ScrollRect>();
         clientsSr.horizontal = true;
 
@@ -188,7 +188,7 @@ public static class GattServerSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? GATT Server Demo UI собрана. Нажми Play.");
+        Debug.Log("GATT Server Demo UI built. Press Play.");
     }
 
     // ================================================================

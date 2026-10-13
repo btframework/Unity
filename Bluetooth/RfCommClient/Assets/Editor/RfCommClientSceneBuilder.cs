@@ -10,8 +10,8 @@ public static class RfCommClientSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // WinForms ClientSize = 528 ? 592. Берём чуть больше — чтобы форма
-    // выглядела как окно, с запасом 20 px со всех сторон.
+    // WinForms ClientSize = 528 x 592. Take a bit more so the form
+    // looks like a window, with 20 px margin on all sides.
     private const float CanvasW = 560f;
     private const float CanvasH = 620f;
 
@@ -39,10 +39,10 @@ public static class RfCommClientSceneBuilder
 
         // ============================================================
         //  Top row  (Designer.cs)
-        //  btDiscover    (12, 12)  75?23
-        //  cbEnumPaired  (93, 16)  85?17
-        //  btPair        (248, 12) 75?23
-        //  btUnpair      (329, 12) 75?23
+        //  btDiscover    (12, 12)  75x23
+        //  cbEnumPaired  (93, 16)  85x17
+        //  btPair        (248, 12) 75x23
+        //  btUnpair      (329, 12) 75x23
         // ============================================================
         Button btDiscover   = MakeButton("BtDiscover",   "Discover",    canvasGO.transform, 12,  12,  75, 23);
         Toggle tgEnumPaired = MakeToggle("TgEnumPaired", "Enum paired", canvasGO.transform, 93,  14,  85, 17);
@@ -51,7 +51,7 @@ public static class RfCommClientSceneBuilder
 
         // ============================================================
         //  Devices table
-        //  lvDevices (12, 41) 505?93, колонки 150 | 150 | 150
+        //  lvDevices (12, 41) 505x93, columns 150 | 150 | 150
         //  Header: 20 px, content: 73 px
         // ============================================================
         MakeHeaderBar("DevicesHeader", canvasGO.transform, 12, 41, 505, 20,
@@ -64,8 +64,8 @@ public static class RfCommClientSceneBuilder
 
         // ============================================================
         //  Service name row
-        //  cbServiceName (12, 142) 111?17
-        //  edServiceName (129, 140) 388?20
+        //  cbServiceName (12, 142) 111x17
+        //  edServiceName (129, 140) 388x20
         // ============================================================
         Toggle tgSvcName = MakeToggle("TgSvcName", "Use service name",
             canvasGO.transform, 12, 140, 111, 17);
@@ -77,10 +77,10 @@ public static class RfCommClientSceneBuilder
         //  cbAuthentication (12, 170)
         //  cbEncryption    (112, 170)
         //  laTimeout       (214, 169)  "Timeout"
-        //  edTimeout       (265, 166)  58?20  "10000"
+        //  edTimeout       (265, 166)  58x20  "10000"
         //  laMs            (329, 169)  "(ms)"
-        //  btConnect       (361, 164) 75?23
-        //  btDisconnect    (442, 164) 75?23
+        //  btConnect       (361, 164) 75x23
+        //  btDisconnect    (442, 164) 75x23
         // ============================================================
         Toggle tgAuth = MakeToggle("TgAuth", "Authentication", canvasGO.transform, 12,  168, 94, 17);
         Toggle tgEnc  = MakeToggle("TgEnc",  "Encryption",     canvasGO.transform, 112, 168, 76, 17);
@@ -95,8 +95,8 @@ public static class RfCommClientSceneBuilder
 
         // ============================================================
         //  Text to send
-        //  edText (12, 195) 424?20
-        //  btSend (442, 193) 75?23
+        //  edText (12, 195) 424x20
+        //  btSend (442, 193) 75x23
         // ============================================================
         TMP_InputField edText = MakeInputField("EdText",
             canvasGO.transform, 12, 195, 424, 20, "Send this text to selected client");
@@ -104,12 +104,12 @@ public static class RfCommClientSceneBuilder
 
         // ============================================================
         //  Buffers
-        //  btGetBuffers  (12, 222) 75?23
+        //  btGetBuffers  (12, 222) 75x23
         //  laReadBuffer  (93, 227)  "Read buffer"
-        //  edReadBuffer  (169, 222) 100?20
+        //  edReadBuffer  (169, 222) 100x20
         //  laWriteBuffer (275, 227) "Write buffer"
-        //  edWriteBuffer (336, 224) 100?20
-        //  btWriteBuffers (442, 222) 75?23
+        //  edWriteBuffer (336, 224) 100x20
+        //  btWriteBuffers (442, 222) 75x23
         // ============================================================
         Button btGetBuffers = MakeButton("BtGetBuffers", "Get buffers",
             canvasGO.transform, 12, 222, 75, 23);
@@ -124,8 +124,8 @@ public static class RfCommClientSceneBuilder
 
         // ============================================================
         //  Events log
-        //  lbEvents (12, 252) 505?290
-        //  btClear  (442, 557) 75?23
+        //  lbEvents (12, 252) 505x290
+        //  btClear  (442, 557) 75x23
         // ============================================================
         var eventsScroll  = MakeScrollView("EventsScroll", canvasGO.transform, 12, 252, 505, 290);
         var eventsContent = eventsScroll.transform.Find("Viewport/Content");
@@ -178,11 +178,11 @@ public static class RfCommClientSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? RFCOMM Client Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("RFCOMM Client Demo UI built using the original layout.");
     }
 
     // ================================================================
-    //  Positioning helper — все контролы абсолютно от левого верхнего угла
+    //  Positioning helper - all controls are absolutely positioned from the top-left corner
     // ================================================================
     private static void Place(GameObject go, float x, float y, float w, float h)
     {
@@ -231,7 +231,7 @@ public static class RfCommClientSceneBuilder
 
         var toggle = go.AddComponent<Toggle>();
 
-        // Background (квадратик слева)
+        // Background (small square on the left)
         var bg = CreateUI("Background", go.transform);
         var bgRect = bg.GetComponent<RectTransform>();
         bgRect.anchorMin = new Vector2(0, 0.5f);
@@ -338,7 +338,7 @@ public static class RfCommClientSceneBuilder
     }
 
     // ================================================================
-    //  Header bar — одна строка с фиксированными колонками
+    //  Header bar - one row with fixed columns
     // ================================================================
     private static void MakeHeaderBar(string name, Transform parent,
         float x, float y, float w, float h, float[] widths, string[] headers)
@@ -374,7 +374,7 @@ public static class RfCommClientSceneBuilder
     }
 
     // ================================================================
-    //  ScrollView с абсолютной позицией
+    //  ScrollView with absolute position
     // ================================================================
     private static GameObject MakeScrollView(string name, Transform parent,
         float x, float y, float w, float h)
@@ -443,8 +443,8 @@ public static class RfCommClientSceneBuilder
         le.minHeight = rowHeight;
         le.preferredHeight = rowHeight;
 
-        // Фон-подсветка (для выделения) — тот же Image, но перекрашиваемый TableRowUI.
-        // Накладываем строки абсолютно.
+        // Background highlight (for selection) - the same Image, recolored by TableRowUI.
+        // Rows are placed absolutely.
         float offset = 4;
         var cells = new TMP_Text[widths.Length];
         for (int i = 0; i < widths.Length; i++)

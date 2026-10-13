@@ -44,7 +44,6 @@ public class BluetoothAudioReceiverDemo : MonoBehaviour
 
     private void Start()
     {
-        // ВАЖНО: создаём на главном потоке — тогда все события придут сюда же.
         _audioWatcher = new wclBluetoothAudioWatcher();
         _audioWatcher.OnDeviceAdded   += AudioWatcherDeviceAdded;
         _audioWatcher.OnDeviceRemoved += AudioWatcherDeviceRemoved;
@@ -85,8 +84,6 @@ public class BluetoothAudioReceiverDemo : MonoBehaviour
             _audioReceiver.OnDisconnected -= AudioReceiverOnDisconnected;
         }
     }
-
-    // ---------------------------------------------------------------- кнопки
 
     private void OnStartClicked()
     {
@@ -134,8 +131,6 @@ public class BluetoothAudioReceiverDemo : MonoBehaviour
         if (logText != null) logText.text = string.Empty;
     }
 
-    // ---------------------------------------------------------------- события watcher'а
-
     private void AudioWatcherDeviceAdded(object sender, string id, string name)
     {
         if (!_rows.ContainsKey(id))
@@ -174,14 +169,10 @@ public class BluetoothAudioReceiverDemo : MonoBehaviour
         Log("Watcher stopped");
     }
 
-    // ---------------------------------------------------------------- события receiver'а
-
     private void AudioReceiverOnDisconnected(object sender, EventArgs e) => Log("Remote device disconnected");
     private void AudioReceiverOnConnected   (object sender, EventArgs e) => Log("Remote device connected");
     private void AudioReceiverOnListen      (object sender, EventArgs e) => Log("Audio receiver listening");
     private void AudioReceiverOnClosed      (object sender, EventArgs e) => Log("Audio receiver closed");
-
-    // ---------------------------------------------------------------- вспомогательное
 
     private void OnDeviceRowClicked(string id)
     {

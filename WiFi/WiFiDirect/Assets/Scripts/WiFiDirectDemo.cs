@@ -151,15 +151,15 @@ public class WiFiDirectDemo : MonoBehaviour
 
     private void AdvertiserOnPairProvidePin(object s, wclWiFiDirectDevice device, out string pin)
     {
-        // Синхронно запросить ввод у пользователя из callback нельзя (зависнет UI).
-        // Поэтому возвращаем пустой PIN, а ввод запрашиваем асинхронно — через панель.
-        // В простейшем случае можно возвращать фиксированный PIN "0000".
+        // It is impossible to synchronously request user input from a callback (it would block the UI).
+        // Therefore we return an empty PIN, and request input asynchronously — through the panel.
+        // In the simplest case, a fixed PIN "0000" can be returned.
         pin = "0000";
         Log(device.Name + " requested PIN. Auto-answered with '0000'");
 
-        // Если нужен интерактивный ввод — раскомментируй ниже, но учитывай,
-        // что сам callback вернёт управление немедленно, а панель появится
-        // уже после завершения операции.
+        // If interactive input is needed, uncomment the code below, but keep in mind
+        // that the callback itself returns control immediately, and the panel will appear
+        // only after the operation completes.
         // ShowPinDialog(device.Name, enteredPin =>
         // {
         //     if (!string.IsNullOrEmpty(enteredPin)) pin = enteredPin;
@@ -171,12 +171,12 @@ public class WiFiDirectDemo : MonoBehaviour
 
     private void AdvertiserOnPairConfirm(object s, wclWiFiDirectDevice device, out bool confirm)
     {
-        // См. комментарий в AdvertiserOnPairProvidePin: блокировать UI нельзя.
-        // Принимаем автоматически.
+        // See comment in AdvertiserOnPairProvidePin: UI cannot be blocked.
+        // We accept automatically.
         confirm = true;
         Log(device.Name + " pairing confirm > accepted");
 
-        // ShowConfirm(device.Name + " connection", result => { /* не влияет на текущий callback */ });
+        // ShowConfirm(device.Name + " connection", result => { /* does not affect the current callback */ });
     }
 
     private void AdvertiserOnPairCompleted(object s, wclWiFiDirectDevice device, int result)
@@ -186,8 +186,8 @@ public class WiFiDirectDemo : MonoBehaviour
     {
         Log("Accepting device " + device.Id);
 
-        // В оригинале здесь MessageBox.Show(YesNo). В Unity блокировать нельзя —
-        // принимаем автоматически и добавляем устройство в таблицу.
+        // Originally MessageBox.Show(YesNo) was here. In Unity, blocking is not allowed —
+        // we accept automatically and add the device to the table.
         accept = true;
 
         var rowGO = Instantiate(deviceRowPrefab, devicesContent);

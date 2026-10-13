@@ -10,7 +10,7 @@ public static class WiFiDirectClientSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 413 ? 472
+    // ClientSize = 413 x 472
     private const float CanvasW = 433f;
     private const float CanvasH = 500f;
 
@@ -46,7 +46,7 @@ public static class WiFiDirectClientSceneBuilder
         var btUnpair      = MakeButton("BtUnpair",      "Unpair",      root, 287, 12, 47, 23);
 
         // ============================================================
-        //  Devices table (12, 41) 390?115, колонки 150 | 200
+        //  Devices table (12, 41) 390x115, columns 150 | 200
         // ============================================================
         var devWidths  = new[] { 150f, 200f };
         var devHeaders = new[] { "Name", "ID" };
@@ -59,13 +59,13 @@ public static class WiFiDirectClientSceneBuilder
 
         // ============================================================
         //  Row 2: Group owner intent / Pairing procedure / PIN toggles
-        //  laGroupOwnerIntent (12, 165)  97?13
-        //  edGroupOwnerIntent (115, 162) 53?20
-        //  laPairingProcedure (12, 191)  90?13
-        //  cbPairingProcedure (115, 188) 132?21
-        //  cbDisplayPIN (321, 161) 81?17
-        //  cbProvidePIN (319, 184) 83?17
-        //  cbPushButton (318, 207) 84?17
+        //  laGroupOwnerIntent (12, 165)  97x13
+        //  edGroupOwnerIntent (115, 162) 53x20
+        //  laPairingProcedure (12, 191)  90x13
+        //  cbPairingProcedure (115, 188) 132x21
+        //  cbDisplayPIN (321, 161) 81x17
+        //  cbProvidePIN (319, 184) 83x17
+        //  cbPushButton (318, 207) 84x17
         // ============================================================
         MakeLabel("LaGroupOwnerIntent", "Group owner intent", root, 12, 165, 97, 13);
         var edGroupOwnerIntent = MakeInputField("EdGroupOwnerIntent", root, 115, 162, 53, 20, "14");
@@ -86,7 +86,7 @@ public static class WiFiDirectClientSceneBuilder
         var btClear      = MakeButton("BtClear",      "Clear",      root, 327, 230, 75, 23);
 
         // ============================================================
-        //  Log (12, 259) 390?199
+        //  Log (12, 259) 390x199
         // ============================================================
         var logScroll  = MakeScrollView("LogScroll", root, 12, 259, 390, 199, false);
         var logContent = logScroll.transform.Find("Viewport/Content");
@@ -136,7 +136,7 @@ public static class WiFiDirectClientSceneBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("? Wi-Fi Direct Client Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Wi-Fi Direct Client Demo UI assembled according to the original layout.");
     }
 
     // ================================================================

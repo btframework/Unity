@@ -10,7 +10,7 @@ public static class WiFiSnifferSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 737 ? 472
+    // ClientSize = 737 x 472
     private const float CanvasW = 757f;
     private const float CanvasH = 494f;
 
@@ -47,7 +47,7 @@ public static class WiFiSnifferSceneBuilder
         var laIfaceMode      = MakeLabel("LaIfaceMode", "Unknown", root, 563, 15, 100, 13);
 
         // ============================================================
-        //  Interfaces table (12, 41) 713?89, колонки 300 | 300
+        //  Interfaces table (12, 41) 713x89, columns 300 | 300
         // ============================================================
         var ifWidths  = new[] { 300f, 300f };
         var ifHeaders = new[] { "Friendly name", "Id" };
@@ -152,7 +152,7 @@ public static class WiFiSnifferSceneBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("? Wi-Fi Sniffer Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Wi-Fi Sniffer Demo UI assembled according to the original layout.");
     }
 
     // ================================================================

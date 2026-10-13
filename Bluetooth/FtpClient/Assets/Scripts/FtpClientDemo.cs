@@ -299,7 +299,7 @@ public class FtpClientDemo : MonoBehaviour
             var row = rowGO.GetComponent<TableRowUI>();
             row.Init(OnFileRowClicked);
 
-            // Двойной клик
+            // Double click
             var dbl = rowGO.GetComponent<DoubleClickEmitter>();
             if (dbl == null) dbl = rowGO.AddComponent<DoubleClickEmitter>();
             dbl.onDoubleClick = () => OnFileRowDoubleClicked(row);
@@ -520,8 +520,8 @@ public class FtpClientDemo : MonoBehaviour
 #if UNITY_EDITOR
         return UnityEditor.EditorUtility.OpenFilePanel("Select file", "", "*");
 #else
-        // В билде OpenFileDialog нет — используем папку persistentDataPath.
-        // Положи файл туда вручную, либо интегрируй сторонний файловый диалог.
+        // There is no OpenFileDialog in a build, so we use the persistentDataPath folder.
+        // Put the file there manually, or integrate a third-party file dialog.
         return Path.Combine(Application.persistentDataPath, "upload.bin");
 #endif
     }

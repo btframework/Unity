@@ -5,9 +5,9 @@ using UnityEngine.UI;
 
 public class BeaconRowUI : MonoBehaviour
 {
-    public RectTransform indentRect;      // сдвигаем дочерние тексты для иерархии
-    public TMP_Text deviceText;           // колонка "Device"
-    public TMP_Text frameTypeText;        // колонка "Frame type"
+    public RectTransform indentRect;      // shift child texts for hierarchy
+    public TMP_Text deviceText;           // "Device" column
+    public TMP_Text frameTypeText;        // "Frame type" column
     public Image background;
 
     public Color normalColor = new Color(1, 1, 1, 0.03f);

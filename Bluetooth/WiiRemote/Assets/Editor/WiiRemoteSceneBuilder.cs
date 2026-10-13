@@ -10,7 +10,7 @@ public static class WiiRemoteSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 650 ? 590 (+ запас 20)
+    // ClientSize = 650 x 590 (+ 20 margin)
     private const float CanvasW = 680f;
     private const float CanvasH = 620f;
 
@@ -53,7 +53,7 @@ public static class WiiRemoteSceneBuilder
         var btRumbleOff = MakeButton("BtRumbleOff","Rumble OFF", root, 565, 41, 75, 23);
 
         // ============================================================
-        //  Devices table (12,41) 327?97, колонки 150 | 150
+        //  Devices table (12,41) 327x97, columns 150 | 150
         // ============================================================
         MakeHeaderBar("DevicesHeader", root, 12, 41, 327, 20,
             new[] { 150f, 150f }, new[] { "Address", "Name" });
@@ -63,7 +63,7 @@ public static class WiiRemoteSceneBuilder
         AddVerticalListGroup(devicesContent);
 
         // ============================================================
-        //  LEDs (4 toggle'а, 2?2)
+        //  LEDs (4 toggles, 2x2)
         // ============================================================
         var tgLed1 = MakeToggle("CbLed1", "LED1", root, 376, 70, 53, 17);
         var tgLed2 = MakeToggle("CbLed2", "LED2", root, 376, 93, 53, 17);
@@ -71,7 +71,7 @@ public static class WiiRemoteSceneBuilder
         var tgLed4 = MakeToggle("CbLed4", "LED4", root, 435, 93, 53, 17);
 
         // ============================================================
-        //  Buttons group (le Table: A..Right)
+        //  Buttons group (the Table: A..Right)
         // ============================================================
         MakeBoldLabel("LaButtons", "Buttons", root, 12, 154, 60, 15);
 
@@ -286,7 +286,7 @@ public static class WiiRemoteSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? Wii Remote Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Wii Remote Demo UI built using the original layout.");
     }
 
     // ================================================================

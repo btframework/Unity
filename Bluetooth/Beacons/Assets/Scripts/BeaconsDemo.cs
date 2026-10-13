@@ -20,8 +20,8 @@ public class BeaconsDemo : MonoBehaviour
     public Button watcherStopButton;
 
     [Header("Devices tree")]
-    public Transform devicesContent;         // куда складываем DeviceNode
-    public GameObject deviceNodePrefab;      // пустой контейнер с VerticalLayoutGroup (DeviceRow + FrameRows)
+    public Transform devicesContent;         // where DeviceNode items are placed
+    public GameObject deviceNodePrefab;      // empty container with VerticalLayoutGroup (DeviceRow + FrameRows)
     public GameObject rowPrefab;             // BeaconRow
 
     [Header("Frame details")]
@@ -101,7 +101,7 @@ public class BeaconsDemo : MonoBehaviour
         advExtendedToggle.onValueChanged.AddListener(OnAdvertiserExtendedChanged);
         scanParamsDropdown.onValueChanged.AddListener(OnScanParamsChanged);
 
-        // Разрешаем только цифры в input-полях.
+        // Allow digits only in the input fields.
         scanIntervalInput .contentType = TMP_InputField.ContentType.IntegerNumber;
         scanWindowInput   .contentType = TMP_InputField.ContentType.IntegerNumber;
         advertiserIntervalInput.contentType = TMP_InputField.ContentType.IntegerNumber;
@@ -123,7 +123,7 @@ public class BeaconsDemo : MonoBehaviour
 
         AdvertiserDefaults();
 
-        // Изначальные состояния UI
+        // Initial UI states
         scanModeDropdown.value = (_watcher.ScanningMode == wclBluetoothLeScanningMode.smActive) ? 0 : 1;
         scanIntervalInput.text = _watcher.ScanInterval.ToString();
         scanWindowInput.text   = _watcher.ScanWindow.ToString();
@@ -161,7 +161,7 @@ public class BeaconsDemo : MonoBehaviour
     }
 
     // ================================================================
-    //  Watcher event wiring (все подписки/отписки в одном месте)
+    //  Watcher event wiring (all subscribe/unsubscribe in one place)
     // ================================================================
     private void HookWatcherEvents(wclBluetoothLeBeaconWatcher w)
     {
@@ -445,7 +445,7 @@ public class BeaconsDemo : MonoBehaviour
     {
         var device = GetOrAddDevice(frame.Address);
 
-        // Ищем существующий фрейм того же типа у этого же устройства.
+        // Look for an existing frame of the same type for the same device.
         FrameNode existing = null;
         foreach (var f in device.Frames)
         {
@@ -475,7 +475,7 @@ public class BeaconsDemo : MonoBehaviour
             });
         }
 
-        // Обновим имя устройства по InformationFrame, как в оригинале.
+        // Update device name from InformationFrame, as in the original.
         if (frame.Frame == AdvertisementFrame.afInformation)
         {
             var info = (InformationFrame)frame;
@@ -486,7 +486,7 @@ public class BeaconsDemo : MonoBehaviour
             }
         }
 
-        // Если строка выбрана — обновим детали.
+        // If the row is selected - refresh details.
         if (_selectedRow != null && ReferenceEquals(_selectedRow.Frame, frame))
             ShowFrameData(frame);
     }
@@ -1261,10 +1261,10 @@ public class BeaconsDemo : MonoBehaviour
         switch (x.Data.Status)
         {
             case 0x00: ShowData("Status", "Owner did not connect within key rotation period (15 min.)"); break;
-            case 0x24: ShowData("Status", "Owner connected with key roation period, Battery Full"); break;
-            case 0x64: ShowData("Status", "Owner connected with key roation period, Battery Medium"); break;
-            case 0xA4: ShowData("Status", "Owner connected with key roation period, Battery Low"); break;
-            case 0xE4: ShowData("Status", "Owner connected with key roation period, Battery Critically Low"); break;
+            case 0x24: ShowData("Status", "Owner connected with key rotation period, Battery Full"); break;
+            case 0x64: ShowData("Status", "Owner connected with key rotation period, Battery Medium"); break;
+            case 0xA4: ShowData("Status", "Owner connected with key rotation period, Battery Low"); break;
+            case 0xE4: ShowData("Status", "Owner connected with key rotation period, Battery Critically Low"); break;
             default:   ShowData("Status", x.Data.Status.ToString("X2")); break;
         }
         ShowData("Key", HexStr(x.Data.Key));
@@ -1335,7 +1335,7 @@ public class BeaconsDemo : MonoBehaviour
         ShowData("Bars", x.Data.Bars.ToString());
     }
 
-    // -------------------- lookup-таблицы --------------------
+    // -------------------- lookup tables --------------------
     private static string HexStr(byte[] data)
     {
         if (data == null || data.Length == 0) return "";
@@ -1351,7 +1351,7 @@ public class BeaconsDemo : MonoBehaviour
             case wclBluetoothAddressType.atClassic:     return "Classic";
             case wclBluetoothAddressType.atPublic:      return "Public";
             case wclBluetoothAddressType.atRandom:      return "Random";
-            case wclBluetoothAddressType.atUnspecified: return "Unpecified";
+            case wclBluetoothAddressType.atUnspecified: return "Unspecified";
             default:                                    return "Unknown";
         }
     }
@@ -1479,7 +1479,7 @@ public class BeaconsDemo : MonoBehaviour
             case 0x08: return "WiFi Password";
             case 0x09: return "iOS Setup";
             case 0x0A: return "Repair";
-            case 0x0B: return "Speaker Setupd";
+            case 0x0B: return "Speaker Setup";
             case 0x0C: return "Apple Pay";
             case 0x0D: return "Whole Home Audio Setup";
             case 0x0E: return "Developer Tools Pairing Request";

@@ -10,7 +10,7 @@ public static class WiFiHostedNetworkSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 644 ? 468
+    // ClientSize = 644 x 468
     private const float CanvasW = 664f;
     private const float CanvasH = 490f;
 
@@ -55,7 +55,7 @@ public static class WiFiHostedNetworkSceneBuilder
         var btGetState        = MakeButton("BtGetState",        "Get state",               root, 539, 41, 75,  23);
 
         // ============================================================
-        //  Data table (12, 70) 620?192, колонки 280 | 280
+        //  Data table (12, 70) 620x192, columns 280 | 280
         // ============================================================
         var dataWidths  = new[] { 280f, 280f };
         var dataHeaders = new[] { "Parameter name", "Parameter value" };
@@ -75,10 +75,10 @@ public static class WiFiHostedNetworkSceneBuilder
         // ============================================================
         //  Settings: SSID / Number of peers / Set settings
         //  laHnSsid (12, 327)
-        //  edSsHnid (111, 324) 125?20
+        //  edSsHnid (111, 324) 125x20
         //  laHnNumberOfPeers (12, 355)
-        //  edHnNumberOfPeers (111, 352) 100?20
-        //  btHnSetSettings (161, 378) 75?23
+        //  edHnNumberOfPeers (111, 352) 100x20
+        //  btHnSetSettings (161, 378) 75x23
         // ============================================================
         var laSsid = MakeLabel("LaSsid", "SSID", root, 12, 327, 40, 13);
         var edSsid = MakeInputField("EdSsid", root, 111, 324, 125, 20, "MyHostedNetwork");
@@ -91,9 +91,9 @@ public static class WiFiHostedNetworkSceneBuilder
         // ============================================================
         //  Key / Persistent / Set key
         //  laHnKey (333, 327)
-        //  edHnKey (374, 324) 131?20
+        //  edHnKey (374, 324) 131x20
         //  cbHnPersistent (336, 354)
-        //  btHnSetKey (430, 378) 75?23
+        //  btHnSetKey (430, 378) 75x23
         // ============================================================
         var laKey = MakeLabel("LaKey", "Key", root, 333, 327, 30, 13);
         var edKey = MakeInputField("EdKey", root, 374, 324, 131, 20, "123456789");
@@ -154,7 +154,7 @@ public static class WiFiHostedNetworkSceneBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("? Wi-Fi Hosted Network Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Wi-Fi Hosted Network Demo UI assembled according to the original layout.");
     }
 
     // ================================================================

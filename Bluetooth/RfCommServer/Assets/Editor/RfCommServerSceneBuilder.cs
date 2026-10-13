@@ -10,7 +10,7 @@ public static class RfCommServerSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // WinForms ClientSize = 641 ? 592 + запас 20 со всех сторон
+    // WinForms ClientSize = 641 x 592 + 20 margin on all sides
     private const float CanvasW = 680f;
     private const float CanvasH = 620f;
 
@@ -43,23 +43,23 @@ public static class RfCommServerSceneBuilder
         Toggle tgEnc  = MakeToggle("TgEnc",  "Encryption",     canvasGO.transform, 12, 37, 76, 17);
 
         // ============================================================
-        //  laServiceName (122, 29) 72?13  "Service name"
-        //  edServiceName (200, 26) 193?20 "Bluetooth Framework server"
+        //  laServiceName (122, 29) 72x13  "Service name"
+        //  edServiceName (200, 26) 193x20 "Bluetooth Framework server"
         // ============================================================
         MakeLabel("LaServiceName", "Service name", canvasGO.transform, 122, 27, 72, 13);
         TMP_InputField edSvcName = MakeInputField("EdSvcName",
             canvasGO.transform, 200, 26, 193, 20, "Bluetooth Framework server");
 
         // ============================================================
-        //  btListen (473, 4) 75?23
-        //  btClose  (473, 33) 75?23
+        //  btListen (473, 4) 75x23
+        //  btClose  (473, 33) 75x23
         // ============================================================
         Button btListen = MakeButton("BtListen", "Listen", canvasGO.transform, 473, 4, 75, 23);
         Button btClose  = MakeButton("BtClose",  "Close",  canvasGO.transform, 473, 33, 75, 23);
 
         // ============================================================
-        //  lvClients (12, 62) 536?76  колонки 150 | 150
-        //  + btDisconnect (554, 62) 75?23
+        //  lvClients (12, 62) 536x76  columns 150 | 150
+        //  + btDisconnect (554, 62) 75x23
         // ============================================================
         MakeHeaderBar("ClientsHeader", canvasGO.transform, 12, 62, 536, 20,
             new[] { 150f, 150f }, new[] { "Address", "Name" });
@@ -72,20 +72,20 @@ public static class RfCommServerSceneBuilder
             canvasGO.transform, 554, 62, 75, 23);
 
         // ============================================================
-        //  edText (12, 146) 536?20
-        //  btSend (554, 144) 75?23
+        //  edText (12, 146) 536x20
+        //  btSend (554, 144) 75x23
         // ============================================================
         TMP_InputField edText = MakeInputField("EdText",
             canvasGO.transform, 12, 146, 536, 20, "Send this text to selected client");
         Button btSend = MakeButton("BtSend", "Send", canvasGO.transform, 554, 144, 75, 23);
 
         // ============================================================
-        //  btGetBuffers   (12, 172)  75?23
-        //  laReadBuffer   (93, 177)  63?13
-        //  edReadBuffer   (162, 174) 100?20
-        //  laWriteBuffer  (268, 177) 62?13
-        //  edWriteBuffer  (336, 174) 100?20
-        //  btSetBuffers   (442, 172) 75?23
+        //  btGetBuffers   (12, 172)  75x23
+        //  laReadBuffer   (93, 177)  63x13
+        //  edReadBuffer   (162, 174) 100x20
+        //  laWriteBuffer  (268, 177) 62x13
+        //  edWriteBuffer  (336, 174) 100x20
+        //  btSetBuffers   (442, 172) 75x23
         // ============================================================
         Button btGetBuffers = MakeButton("BtGetBuffers", "Get buffers",
             canvasGO.transform, 12, 172, 75, 23);
@@ -99,8 +99,8 @@ public static class RfCommServerSceneBuilder
             canvasGO.transform, 442, 172, 75, 23);
 
         // ============================================================
-        //  lbEvents (12, 201) 617?342
-        //  btClear  (554, 557) 75?23
+        //  lbEvents (12, 201) 617x342
+        //  btClear  (554, 557) 75x23
         // ============================================================
         var eventsScroll  = MakeScrollView("EventsScroll", canvasGO.transform, 12, 201, 617, 342);
         var eventsContent = eventsScroll.transform.Find("Viewport/Content");
@@ -151,11 +151,11 @@ public static class RfCommServerSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? RFCOMM Server Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("RFCOMM Server Demo UI built using the original layout.");
     }
 
     // ================================================================
-    //  Position — абсолютно от левого верхнего угла
+    //  Position - absolute from the top-left corner
     // ================================================================
     private static void Place(GameObject go, float x, float y, float w, float h)
     {

@@ -59,7 +59,7 @@ public static class BleSnifferSceneBuilder
         Button btnClear = MakeButton("BtnClear", "Clear", top.transform, 120, 44);
 
         // ============================================================
-        //  Log (TMP monospace рекомендуется)
+        //  Log (TMP monospace is recommended)
         // ============================================================
         var logScroll = MakeScrollView("LogScroll", canvasGO.transform);
         var logRect = logScroll.GetComponent<RectTransform>();
@@ -73,7 +73,7 @@ public static class BleSnifferSceneBuilder
         logCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         var logText = CreateText("LogText", "", logContent);
-        logText.enableWordWrapping = false;   // hex-дампы не переносим
+        logText.enableWordWrapping = false;   // do not wrap hex dumps
         logText.overflowMode       = TextOverflowModes.Overflow;
         logText.margin             = new Vector4(8, 8, 8, 8);
         logText.alignment          = TextAlignmentOptions.TopLeft;
@@ -105,10 +105,10 @@ public static class BleSnifferSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? BLE Sniffer Demo UI собрана. Нажми Play.\n" +
-                  "?? Совет: чтобы hex-дампы выравнивались по колонкам, назначь " +
-                  "в TMP_Text > Font Asset моноширинный шрифт " +
-                  "(например, создать через Window > TextMeshPro > Font Asset Creator из Courier New / JetBrains Mono).");
+        Debug.Log("BLE Sniffer Demo UI built. Press Play.\n" +
+                  "Tip: to make hex dumps align in columns, assign a monospaced font " +
+                  "in TMP_Text > Font Asset (for example, create one via " +
+                  "Window > TextMeshPro > Font Asset Creator from Courier New / JetBrains Mono).");
     }
 
     // ================================================================

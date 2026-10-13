@@ -186,7 +186,7 @@ public class BluetoothManagerDemo : MonoBehaviour
     }
 
     // ==================================================================
-    //  Simple modal confirm (замена MessageBox Yes/No/Cancel)
+    //  Simple modal confirm (replacement for MessageBox Yes/No/Cancel)
     // ==================================================================
     private Action<int> _confirmCallback;
 
@@ -375,8 +375,8 @@ public class BluetoothManagerDemo : MonoBehaviour
 
         if (dontTurnOffToggle.isOn && radio.Plugged && !radio.Available)
         {
-            // В WinForms-версии была пауза 200 мс и повтор. В Unity Thread.Sleep
-            // на главном потоке нельзя, поэтому просто повторяем один раз.
+            // The WinForms version had a 200 ms sleep and retry. In Unity Thread.Sleep
+            // cannot be used on the main thread, so we simply retry once.
             Int32 res = radio.TurnOn();
             if (res != wclErrors.WCL_E_SUCCESS)
                 TraceEvent(radio, "Turn ON", "Error", res.ToString("X8"));
@@ -985,7 +985,7 @@ public class BluetoothManagerDemo : MonoBehaviour
         row.SetCell(2, parameter);
         row.SetCell(3, value);
 
-        // Автоскролл
+        // Auto-scroll
         var sr = eventsContent.GetComponentInParent<ScrollRect>();
         if (sr != null)
         {

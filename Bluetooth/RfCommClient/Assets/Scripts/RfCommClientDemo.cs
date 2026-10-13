@@ -92,7 +92,7 @@ public class RfCommClientDemo : MonoBehaviour
 
         _manager.Open();
 
-        // Начальные значения из настроек клиента
+        // Initial values from the client settings
         authenticationToggle.isOn = _client.Authentication;
         encryptionToggle.isOn     = _client.Encryption;
 

@@ -11,7 +11,6 @@ public static class AudioSwitcherSceneBuilder
     private const string PrefabsFolder = "Assets/Prefabs";
     private const string PrefabPath    = PrefabsFolder + "/AudioSwitcherRow.prefab";
 
-    // Ширины колонок в таблице устройств (px)
     private static readonly (string header, float width)[] Columns = new[]
     {
         ("ID",            180f),
@@ -33,9 +32,6 @@ public static class AudioSwitcherSceneBuilder
 
         EnsureEventSystem();
 
-        // ============================================================
-        //  Canvas
-        // ============================================================
         var canvasGO = CreateUI("AudioSwitcherUI", null);
         var canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -47,9 +43,6 @@ public static class AudioSwitcherSceneBuilder
 
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // ============================================================
-        //  Row 1: Enum | Role+Dropdown | SetDefault | Refresh | Flow+Dropdown | GetDefault
-        // ============================================================
         var row1 = CreateHorizontalBar("Row1", canvasGO.transform,
             new Vector2(20, -20), new Vector2(-20, -20), 44);
 
@@ -64,9 +57,6 @@ public static class AudioSwitcherSceneBuilder
             new[] { "Capture", "Render" });
         Button btnGetDefault = CreateButton("BtnGetDefault", "GetDefault", row1.transform, 140, 40);
 
-        // ============================================================
-        //  Row 2: Toggles Active/Disabled/Unplugged/NotPresent + Connect/Disconnect + UseMAC
-        // ============================================================
         var row2 = CreateHorizontalBar("Row2", canvasGO.transform,
             new Vector2(20, -74), new Vector2(-20, -74), 34);
 
@@ -78,9 +68,6 @@ public static class AudioSwitcherSceneBuilder
         Button btnDisconnect = CreateButton("BtnDisconnect", "Disconnect", row2.transform, 130, 30);
         Toggle tgUseMac      = CreateToggle("TgUseMac",      "Use MAC",    row2.transform, 120);
 
-        // ============================================================
-        //  Headers
-        // ============================================================
         var headerRow = CreateHorizontalBar("Headers", canvasGO.transform,
             new Vector2(20, -116), new Vector2(-20, -116), 30);
 
@@ -95,9 +82,6 @@ public static class AudioSwitcherSceneBuilder
             le.minWidth       = col.width;
         }
 
-        // ============================================================
-        //  DevicesScroll
-        // ============================================================
         var devicesScroll = CreateScrollView("DevicesScroll", canvasGO.transform);
         var devRect = devicesScroll.GetComponent<RectTransform>();
         devRect.anchorMin = new Vector2(0, 1);
@@ -118,9 +102,6 @@ public static class AudioSwitcherSceneBuilder
         var devCsf = devicesContent.gameObject.AddComponent<ContentSizeFitter>();
         devCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        // ============================================================
-        //  LogScroll + Clear
-        // ============================================================
         var logScroll = CreateScrollView("LogScroll", canvasGO.transform);
         var logRect = logScroll.GetComponent<RectTransform>();
         logRect.anchorMin = new Vector2(0, 0);
@@ -143,7 +124,6 @@ public static class AudioSwitcherSceneBuilder
         ltRect.sizeDelta = Vector2.zero;
         ltTextCsf(logText);
 
-        // Кнопка Clear в правом нижнем углу
         var clearBtn = CreateButton("BtnClear", "Clear", canvasGO.transform, 110, 40);
         var clearRect = clearBtn.GetComponent<RectTransform>();
         clearRect.anchorMin = new Vector2(1, 0);
@@ -151,14 +131,8 @@ public static class AudioSwitcherSceneBuilder
         clearRect.pivot     = new Vector2(1, 0);
         clearRect.anchoredPosition = new Vector2(-20, 20);
 
-        // ============================================================
-        //  Префаб строки таблицы
-        // ============================================================
         var rowPrefab = CreateDeviceRowPrefab();
 
-        // ============================================================
-        //  Главный GameObject + связи
-        // ============================================================
         var demoGO = new GameObject("AudioSwitcherDemo");
         var demo = demoGO.AddComponent<AudioSwitcherDemo>();
 
@@ -187,13 +161,8 @@ public static class AudioSwitcherSceneBuilder
 
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
-
-        Debug.Log("? Audio Switcher Demo UI собрана. Нажми Play.");
     }
 
-    // ================================================================
-    //  Row prefab
-    // ================================================================
     private static GameObject CreateDeviceRowPrefab()
     {
         if (!Directory.Exists(PrefabsFolder))
@@ -250,9 +219,6 @@ public static class AudioSwitcherSceneBuilder
         return prefab;
     }
 
-    // ================================================================
-    //  Helpers
-    // ================================================================
     private static void ltTextCsf(TMP_Text t)
     {
         var csf = t.gameObject.AddComponent<ContentSizeFitter>();
@@ -374,7 +340,6 @@ public static class AudioSwitcherSceneBuilder
 
         var toggle = go.AddComponent<Toggle>();
 
-        // Background
         var bg = CreateUI("Background", go.transform);
         var bgRect = bg.GetComponent<RectTransform>();
         bgRect.anchorMin = new Vector2(0, 0.5f);
@@ -385,7 +350,6 @@ public static class AudioSwitcherSceneBuilder
         var bgImg = bg.AddComponent<Image>();
         bgImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
 
-        // Checkmark
         var cm = CreateUI("Checkmark", bg.transform);
         var cmRect = cm.GetComponent<RectTransform>();
         cmRect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -396,7 +360,6 @@ public static class AudioSwitcherSceneBuilder
         var cmImg = cm.AddComponent<Image>();
         cmImg.color = new Color(0.4f, 0.7f, 1f, 1f);
 
-        // Label
         var lbl = CreateText("Label", label, go.transform);
         lbl.fontSize = 18;
         lbl.alignment = TextAlignmentOptions.MidlineLeft;
@@ -429,7 +392,6 @@ public static class AudioSwitcherSceneBuilder
 
         var dd = go.AddComponent<TMP_Dropdown>();
 
-        // Caption label (показывает текущее значение)
         var labelGO = CreateUI("Label", go.transform);
         var label = labelGO.AddComponent<TextMeshProUGUI>();
         label.text = options.Length > 0 ? options[0] : "";
@@ -442,7 +404,6 @@ public static class AudioSwitcherSceneBuilder
         labelRect.offsetMin = new Vector2(10, 0);
         labelRect.offsetMax = new Vector2(-25, 0);
 
-        // Arrow (простой квадратик)
         var arrowGO = CreateUI("Arrow", go.transform);
         var arrowImg = arrowGO.AddComponent<Image>();
         arrowImg.color = new Color(0.7f, 0.7f, 0.7f, 1f);
@@ -453,7 +414,6 @@ public static class AudioSwitcherSceneBuilder
         arrowRect.anchoredPosition = new Vector2(-8, 0);
         arrowRect.sizeDelta = new Vector2(12, 12);
 
-        // Template (всплывающий список)
         var template = CreateUI("Template", go.transform);
         var templateRect = template.GetComponent<RectTransform>();
         templateRect.anchorMin = new Vector2(0, 0);
@@ -470,7 +430,6 @@ public static class AudioSwitcherSceneBuilder
         var templateMask = template.AddComponent<Mask>();
         templateMask.showMaskGraphic = true;
 
-        // Viewport
         var viewport = CreateUI("Viewport", template.transform);
         var vpRect = viewport.GetComponent<RectTransform>();
         vpRect.anchorMin = Vector2.zero;
@@ -482,7 +441,6 @@ public static class AudioSwitcherSceneBuilder
         var vpMask = viewport.AddComponent<Mask>();
         vpMask.showMaskGraphic = false;
 
-        // Content
         var content = CreateUI("Content", viewport.transform);
         var cRect = content.GetComponent<RectTransform>();
         cRect.anchorMin = new Vector2(0, 1);
@@ -491,7 +449,6 @@ public static class AudioSwitcherSceneBuilder
         cRect.anchoredPosition = Vector2.zero;
         cRect.sizeDelta = new Vector2(0, 28);
 
-        // Item
         var item = CreateUI("Item", content.transform);
         var itemRect = item.GetComponent<RectTransform>();
         itemRect.anchorMin = new Vector2(0, 0.5f);

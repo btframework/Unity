@@ -20,9 +20,6 @@ public static class AudioVolumeSceneBuilder
 
         EnsureEventSystem();
 
-        // ============================================================
-        //  Canvas
-        // ============================================================
         var canvasGO = CreateUI("AudioVolumeUI", null);
         var canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -34,9 +31,6 @@ public static class AudioVolumeSceneBuilder
 
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // ============================================================
-        //  Верхняя панель: Endpoints + dropdown + Open/Close
-        // ============================================================
         var top = CreateUI("TopBar", canvasGO.transform);
         var topRect = top.GetComponent<RectTransform>();
         topRect.anchorMin = new Vector2(0, 1);
@@ -59,9 +53,6 @@ public static class AudioVolumeSceneBuilder
         Button btnOpen  = CreateButton("BtnOpen",  "Open",  top.transform, 120, 44);
         Button btnClose = CreateButton("BtnClose", "Close", top.transform, 120, 44);
 
-        // ============================================================
-        //  Master bar (слева)
-        // ============================================================
         var masterBarGO = CreateUI("MasterBar", canvasGO.transform);
         var masterBarRect = masterBarGO.GetComponent<RectTransform>();
         masterBarRect.anchorMin = new Vector2(0, 1);
@@ -81,9 +72,6 @@ public static class AudioVolumeSceneBuilder
         var masterBarUI = masterBarGO.AddComponent<VerticalBarUI>();
         masterBarUI.fill = masterBarFill;
 
-        // ============================================================
-        //  Channels container (по центру)
-        // ============================================================
         var channelsContainer = CreateUI("ChannelsContainer", canvasGO.transform);
         var chRect = channelsContainer.GetComponent<RectTransform>();
         chRect.anchorMin = new Vector2(0, 1);
@@ -100,9 +88,6 @@ public static class AudioVolumeSceneBuilder
         chHlg.childControlWidth  = true;
         chHlg.childControlHeight = true;
 
-        // ============================================================
-        //  Mute + вертикальный слайдер (справа)
-        // ============================================================
         var muteGO = CreateUI("MuteToggle", canvasGO.transform);
         var muteRect = muteGO.GetComponent<RectTransform>();
         muteRect.anchorMin = new Vector2(1, 1);
@@ -123,9 +108,6 @@ public static class AudioVolumeSceneBuilder
 
         var masterSlider = BuildVerticalSlider(sliderGO);
 
-        // ============================================================
-        //  Log
-        // ============================================================
         var logScroll = CreateScrollView("LogScroll", canvasGO.transform);
         var logRect = logScroll.GetComponent<RectTransform>();
         logRect.anchorMin = new Vector2(0, 0);
@@ -159,14 +141,8 @@ public static class AudioVolumeSceneBuilder
         clearRect.pivot     = new Vector2(1, 0);
         clearRect.anchoredPosition = new Vector2(-30, 30);
 
-        // ============================================================
-        //  Префаб канала
-        // ============================================================
         var channelBarPrefab = CreateChannelBarPrefab();
 
-        // ============================================================
-        //  Main GameObject + связи
-        // ============================================================
         var demoGO = new GameObject("AudioVolumeDemo");
         var demo = demoGO.AddComponent<AudioVolumeDemo>();
 
@@ -185,15 +161,12 @@ public static class AudioVolumeSceneBuilder
         demo.logScrollRect      = logScroll.GetComponent<ScrollRect>();
         demo.clearButton        = clearBtn;
 
-        // Скрытые по умолчанию элементы — как в Form.Designer
         masterBarGO.SetActive(false);
         sliderGO   .SetActive(false);
         muteGO     .SetActive(false);
 
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
-
-        Debug.Log("? Audio Volume Demo UI собрана. Нажми Play.");
     }
 
     // ================================================================

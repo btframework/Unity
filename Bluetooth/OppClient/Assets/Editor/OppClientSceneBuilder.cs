@@ -164,7 +164,7 @@ public static class OppClientSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? OPP Client Demo UI собрана. Нажми Play.");
+        Debug.Log("OPP Client Demo UI built. Press Play.");
     }
 
     // ================================================================

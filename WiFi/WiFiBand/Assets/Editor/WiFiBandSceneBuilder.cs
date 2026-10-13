@@ -10,7 +10,7 @@ public static class WiFiBandSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 760 ? 371 + 20 запас. Форма низкая, лог умещаем под таблицей.
+    // ClientSize = 760 x 371 + 20 margin. The form is short, so we fit the log under the table.
     private const float CanvasW = 780f;
     private const float CanvasH = 470f;
 
@@ -37,7 +37,7 @@ public static class WiFiBandSceneBuilder
         var root = canvasGO.transform;
 
         // ============================================================
-        //  Interfaces (12, 25) 736?97, колонки 250 | 300
+        //  Interfaces (12, 25) 736x97, columns 250 | 300
         // ============================================================
         MakeLabel("LaInterfaces", "Wi-Fi Interfaces", root, 9, 9, 130, 13);
 
@@ -51,7 +51,7 @@ public static class WiFiBandSceneBuilder
         AddVerticalListGroup(interfacesContent);
 
         // ============================================================
-        //  Params (12, 155) 736?164, колонки 100 | 150 | 220 | 220
+        //  Params (12, 155) 736x164, columns 100 | 150 | 220 | 220
         // ============================================================
         MakeLabel("LaParams", "Interface parameters", root, 9, 139, 160, 13);
 
@@ -67,8 +67,8 @@ public static class WiFiBandSceneBuilder
         // ============================================================
         //  Values row
         //  laValues (9, 341) "Values"
-        //  cbValues (57, 338) 239?21
-        //  btSetValue (302, 336) 75?23
+        //  cbValues (57, 338) 239x21
+        //  btSetValue (302, 336) 75x23
         // ============================================================
         MakeLabel("LaValues", "Values", root, 9, 341, 45, 13);
 
@@ -76,8 +76,8 @@ public static class WiFiBandSceneBuilder
         var btSetValue = MakeButton("BtSetValue", "Set value", root, 302, 336, 75, 23);
 
         // ============================================================
-        //  Log (12, 373) 736?80 — добавлен ниже оригинала, чтобы
-        //  видеть ошибки, которые в WinForms шли через MessageBox.
+        //  Log (12, 373) 736x80 - added below the original so we can
+        //  see errors that in WinForms came through a MessageBox.
         // ============================================================
         var logScroll  = MakeScrollView("LogScroll", root, 12, 373, 736, 80);
         var logContent = logScroll.transform.Find("Viewport/Content");
@@ -111,7 +111,7 @@ public static class WiFiBandSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? Wi-Fi Band Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Wi-Fi Band Demo UI built using the original layout.");
     }
 
     // ================================================================

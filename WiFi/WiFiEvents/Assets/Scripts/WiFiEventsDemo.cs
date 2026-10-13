@@ -452,7 +452,7 @@ public class WiFiEventsDemo : MonoBehaviour
         TraceEvent(Guid.Empty, "", "AuthParams.Profile.AllowLogonDialogs", state.AuthParams.Profile.AllowLogonDialogs ? "True" : "False");
         TraceEvent(Guid.Empty, "", "AuthParams.Profile.UserBasedVLan", state.AuthParams.Profile.UserBasedVLan ? "True" : "False");
 
-        // AuthIdentity Ч просто пишем им€ enum'а.
+        // AuthIdentity - just write the enum name.
         TraceEvent(Guid.Empty, "", "AuthParams.AuthIdentity", state.AuthParams.AuthIdentity.ToString());
 
         switch (state.AuthParams.QuarantineState)

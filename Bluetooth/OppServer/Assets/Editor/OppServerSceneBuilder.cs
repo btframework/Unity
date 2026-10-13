@@ -133,7 +133,7 @@ public static class OppServerSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? OPP Server Demo UI собрана. Нажми Play.");
+        Debug.Log("OPP Server Demo UI built. Press Play.");
     }
 
     // ================================================================

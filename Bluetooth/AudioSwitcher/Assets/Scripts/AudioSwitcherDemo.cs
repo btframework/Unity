@@ -66,7 +66,6 @@ public class AudioSwitcherDemo : MonoBehaviour
         _switcher.OnDeviceRemoved        += SwitcherOnDeviceRemoved;
         _switcher.OnStateChanged         += SwitcherOnStateChanged;
 
-        // Значения по умолчанию — как в fmMain_Load
         if (activeToggle != null) activeToggle.isOn = true;
         if (roleDropdown != null) roleDropdown.value = 0; // Console
         if (flowDropdown != null) flowDropdown.value = 0; // Capture

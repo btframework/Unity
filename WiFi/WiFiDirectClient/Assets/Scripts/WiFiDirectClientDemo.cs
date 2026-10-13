@@ -161,7 +161,7 @@ public class WiFiDirectClientDemo : MonoBehaviour
 
     private void ClientOnPairProvidePin(object s, wclWiFiDirectDevice device, out string pin)
     {
-        // В Unity из синхронного callback нельзя запросить ввод через UI.
+        // In Unity, you cannot request input via UI from a synchronous callback.
         pin = "0000";
         Log(device.Name + " requested PIN. Auto-answered with '0000'");
     }
@@ -171,7 +171,7 @@ public class WiFiDirectClientDemo : MonoBehaviour
 
     private void ClientOnPairConfirm(object s, wclWiFiDirectDevice device, out bool confirm)
     {
-        // То же ограничение: блокировать UI нельзя, поэтому подтверждаем.
+        // Same limitation: UI cannot be blocked, so we confirm.
         confirm = true;
         Log(device.Name + " pairing confirm > accepted");
     }

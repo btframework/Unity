@@ -268,7 +268,7 @@ public static class GattClientSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? GATT Client Demo UI собрана. Нажми Play.");
+        Debug.Log("GATT Client Demo UI built. Press Play.");
     }
 
     // ================================================================

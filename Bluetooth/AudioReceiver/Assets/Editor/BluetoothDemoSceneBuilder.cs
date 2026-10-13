@@ -14,16 +14,12 @@ public static class BluetoothDemoSceneBuilder
     [MenuItem("Tools/Bluetooth Demo/Build Scene")]
     public static void BuildScene()
     {
-        // --- Чистим предыдущую сборку, если её запускали повторно ---
         DestroyIfExists("BluetoothDemoUI");
         DestroyIfExists("BluetoothDemo");
         DestroyIfExists("EventSystem");
 
         EnsureEventSystem();
 
-        // ============================================================
-        //  Canvas
-        // ============================================================
         var canvasGO = CreateUI("BluetoothDemoUI", null);
         var canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -35,9 +31,6 @@ public static class BluetoothDemoSceneBuilder
 
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // ============================================================
-        //  Top bar с кнопками
-        // ============================================================
         var topBar = CreateUI("TopBar", canvasGO.transform);
         var topRect = topBar.GetComponent<RectTransform>();
         topRect.anchorMin = new Vector2(0, 1);
@@ -61,9 +54,6 @@ public static class BluetoothDemoSceneBuilder
         Button btnConnect = CreateButton("BtnConnect", "Connect", topBar.transform);
         Button btnClear   = CreateButton("BtnClear",   "Clear",   topBar.transform);
 
-        // ============================================================
-        //  Метка выбранного устройства
-        // ============================================================
         var selectedLabel = CreateText("SelectedDeviceLabel", "Selected: (none)", canvasGO.transform);
         var selRect = selectedLabel.rectTransform;
         selRect.anchorMin = new Vector2(0, 1);
@@ -72,9 +62,6 @@ public static class BluetoothDemoSceneBuilder
         selRect.anchoredPosition = new Vector2(0, -70);
         selRect.sizeDelta = new Vector2(-20, 28);
 
-        // ============================================================
-        //  DevicesScroll
-        // ============================================================
         var devicesScroll = CreateScrollView("DevicesScroll", canvasGO.transform);
         var devRect = devicesScroll.GetComponent<RectTransform>();
         devRect.anchorMin = new Vector2(0, 1);
@@ -96,9 +83,6 @@ public static class BluetoothDemoSceneBuilder
         var devCsf = devicesContent.gameObject.AddComponent<ContentSizeFitter>();
         devCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        // ============================================================
-        //  LogScroll + LogText
-        // ============================================================
         var logScroll = CreateScrollView("LogScroll", canvasGO.transform);
         var logRect = logScroll.GetComponent<RectTransform>();
         logRect.anchorMin = new Vector2(0, 0);
@@ -126,14 +110,8 @@ public static class BluetoothDemoSceneBuilder
         var ltCsf = logText.gameObject.AddComponent<ContentSizeFitter>();
         ltCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        // ============================================================
-        //  DeviceRow prefab
-        // ============================================================
         var deviceRowPrefab = CreateDeviceRowPrefab();
 
-        // ============================================================
-        //  BluetoothDemo + связи
-        // ============================================================
         var demoGO = new GameObject("BluetoothDemo");
         var demo = demoGO.AddComponent<BluetoothAudioReceiverDemo>();
 
@@ -151,8 +129,6 @@ public static class BluetoothDemoSceneBuilder
 
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
-
-        Debug.Log("? Bluetooth Demo UI собрана. Нажми Play.");
     }
 
     // ================================================================

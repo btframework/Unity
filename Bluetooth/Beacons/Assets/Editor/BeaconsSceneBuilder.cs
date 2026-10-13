@@ -80,7 +80,7 @@ public static class BeaconsSceneBuilder
         detCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         // ============================================================
-        //  Advertiser panel (набор checkbox'ов)
+        //  Advertiser panel (set of checkboxes)
         // ============================================================
         var advBar = MakeHBar("AdvBar", canvasGO.transform, 570, 40);
         MakeBoldLabel("BLE Advertiser", advBar.transform, 180, 40);
@@ -96,7 +96,7 @@ public static class BeaconsSceneBuilder
         var ddSecondaryPhy = MakeDropdown("DdSecondaryPhy", advBar.transform, 180, 40,
             new[] { "Unspecified", "Uncoded 1M", "Uncoded 2M", "Coded" });
 
-        // 4 grid-строки из toggles
+        // 4 grid rows of toggles
         var advToggles = MakeVBar("AdvToggles", canvasGO.transform, 620, 4, 34);
 
         var row1 = MakeHBarRaw("AdvRow1", advToggles.transform, 34);
@@ -210,7 +210,7 @@ public static class BeaconsSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? Beacons Demo UI собрана. Нажми Play.");
+        Debug.Log("Beacons Demo UI built. Press Play.");
     }
 
     // ================================================================
@@ -231,7 +231,7 @@ public static class BeaconsSceneBuilder
         var le = root.AddComponent<LayoutElement>();
         le.minHeight = 30; le.preferredHeight = 30;
 
-        // Общий контейнер с отступом
+        // Common container with indent
         var indent = CreateUI("Indent", root.transform);
         var iRect = indent.GetComponent<RectTransform>();
         iRect.anchorMin = new Vector2(0, 0);

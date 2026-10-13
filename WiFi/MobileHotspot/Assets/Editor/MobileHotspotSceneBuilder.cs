@@ -10,7 +10,7 @@ public static class MobileHotspotSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // WinForms ClientSize = 461 ? 316. Расширяем по вертикали, чтобы уместить лог.
+    // WinForms ClientSize = 461 x 316. Extend vertically to fit the log.
     private const float CanvasW = 481f;
     private const float CanvasH = 460f;
 
@@ -82,7 +82,7 @@ public static class MobileHotspotSceneBuilder
         var btDisableTimeout   = MakeButton("BtDisableTimeout",   "Disable timeout",   root, 333, 131, 92,  23);
 
         // ============================================================
-        //  Connected clients table (15, 160) 434?144 — колонки 150 | 250
+        //  Connected clients table (15, 160) 434x144 - columns 150 | 250
         // ============================================================
         MakeHeaderBar("ClientsHeader", root, 15, 160, 434, 20,
             new[] { 150f, 250f }, new[] { "Mac", "Host name" });
@@ -92,7 +92,7 @@ public static class MobileHotspotSceneBuilder
         AddVerticalListGroup(clientsContent);
 
         // ============================================================
-        //  Log (добавлено ниже — заменяет MessageBox-логи)
+        //  Log (added below - replaces MessageBox logs)
         // ============================================================
         var logScroll  = MakeScrollView("LogScroll", root, 15, 322, 434, 120);
         var logContent = logScroll.transform.Find("Viewport/Content");
@@ -147,7 +147,7 @@ public static class MobileHotspotSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? Mobile Hotspot Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Mobile Hotspot Demo UI built using the original layout.");
     }
 
     // ================================================================

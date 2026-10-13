@@ -117,7 +117,7 @@ public static class FtpClientSceneBuilder
             new Vector2(20, -470), 230, filesWidths, filesHeaders);
 
         // ============================================================
-        //  Log table (одна колонка)
+        //  Log table (single column)
         // ============================================================
         var logWidths = new[] { 1800f };
         var logHeaders = new[] { "Log" };
@@ -132,7 +132,7 @@ public static class FtpClientSceneBuilder
         ceRect.anchoredPosition = new Vector2(-20, 20);
 
         // ============================================================
-        //  Prefabs для строк
+        //  Table row prefabs
         // ============================================================
         var deviceRow = MakeTableRowPrefab("FtpDeviceRow", devicesWidths);
         var fileRow   = MakeTableRowPrefab("FtpFileRow",   filesWidths);
@@ -177,7 +177,7 @@ public static class FtpClientSceneBuilder
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        Debug.Log("? FTP Client Demo UI собрана. Нажми Play.");
+        Debug.Log("FTP Client Demo UI built. Press Play.");
     }
 
     // ================================================================

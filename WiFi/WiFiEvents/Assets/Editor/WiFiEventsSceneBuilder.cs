@@ -10,7 +10,7 @@ public static class WiFiEventsSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 851 ? 431
+    // ClientSize = 851 x 431
     private const float CanvasW = 871f;
     private const float CanvasH = 451f;
 
@@ -44,8 +44,8 @@ public static class WiFiEventsSceneBuilder
         var btClear = MakeButton("BtClear", "Clear", root, 764, 12, 75, 23);
 
         // ============================================================
-        //  Events table (12, 41) 827?378
-        //  Колонки: Interface ID 200 | Event name 200 | Parameter name 200 | Parameter value 200
+        //  Events table (12, 41) 827x378
+        //  Columns: Interface ID 200 | Event name 200 | Parameter name 200 | Parameter value 200
         // ============================================================
         var widths  = new[] { 200f, 200f, 200f, 200f };
         var headers = new[] { "Interface ID", "Event name", "Parameter name", "Parameter value" };
@@ -80,7 +80,7 @@ public static class WiFiEventsSceneBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("? Wi-Fi Events Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Wi-Fi Events Demo UI assembled according to the original layout.");
     }
 
     // ================================================================

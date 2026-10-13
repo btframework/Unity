@@ -113,8 +113,8 @@ public class WiFiDirectSoftAPDemo : MonoBehaviour
 
     private void SoftApOnDeviceAccept(object s, wclWiFiDirectDevice device, out bool accept)
     {
-        // —инхронный callback Ч блокировать UI нельз€, поэтому принимаем автоматически.
-        // ≈сли у теб€ событи€ приход€т из фонового потока, сюда можно вставить
+        // Synchronous callback Ч UI cannot be blocked, so we accept automatically.
+        // If your events come from a background thread, you can insert here
         // ManualResetEventSlim + ShowConfirm + Wait(5s).
         accept = true;
         Log("Accepting device: " + device.Id);

@@ -10,7 +10,7 @@ public static class WiFiDirectSoftAPSceneBuilder
 {
     private const string PrefabsFolder = "Assets/Prefabs";
 
-    // ClientSize = 512 ? 406
+    // ClientSize = 512 x 406
     private const float CanvasW = 532f;
     private const float CanvasH = 430f;
 
@@ -38,9 +38,9 @@ public static class WiFiDirectSoftAPSceneBuilder
 
         // ============================================================
         //  SSID row
-        //  laSsid (12, 11)  32?13
-        //  edSsid (77, 8)   137?20
-        //  btGetIpSettings (220, 8) 102?23
+        //  laSsid (12, 11)  32x13
+        //  edSsid (77, 8)   137x20
+        //  btGetIpSettings (220, 8) 102x23
         // ============================================================
         MakeLabel("LaSsid", "SSID", root, 12, 9, 40, 13);
         var edSsid = MakeInputField("EdSsid", root, 77, 8, 137, 20, "");
@@ -48,9 +48,9 @@ public static class WiFiDirectSoftAPSceneBuilder
 
         // ============================================================
         //  Passphrase row
-        //  laPssphrase (9, 37)  62?13
-        //  edPassphrase (77, 34) 137?20
-        //  btSetIpSettings (220, 37) 102?23
+        //  laPssphrase (9, 37)  62x13
+        //  edPassphrase (77, 34) 137x20
+        //  btSetIpSettings (220, 37) 102x23
         // ============================================================
         MakeLabel("LaPassphrase", "Passphrase", root, 9, 35, 70, 13);
         var edPassphrase = MakeInputField("EdPassphrase", root, 77, 34, 137, 20, "");
@@ -58,16 +58,16 @@ public static class WiFiDirectSoftAPSceneBuilder
 
         // ============================================================
         //  Start / Stop row
-        //  btStart (40, 60)  75?23
-        //  btStop  (121, 60) 75?23
-        //  btResetIpSettings (220, 66) 102?23
+        //  btStart (40, 60)  75x23
+        //  btStop  (121, 60) 75x23
+        //  btResetIpSettings (220, 66) 102x23
         // ============================================================
         var btStart = MakeButton("BtStart", "Start", root, 40, 60, 75, 23);
         var btStop  = MakeButton("BtStop",  "Stop",  root, 121, 60, 75, 23);
         var btResetIpSettings = MakeButton("BtResetIpSettings", "Reset IP Settings", root, 220, 66, 102, 23);
 
         // ============================================================
-        //  Log (12, 93) 488?303
+        //  Log (12, 93) 488x303
         // ============================================================
         var logScroll  = MakeScrollView("LogScroll", root, 12, 93, 488, 303, false);
         var logContent = logScroll.transform.Find("Viewport/Content");
@@ -112,7 +112,7 @@ public static class WiFiDirectSoftAPSceneBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("? Wi-Fi Direct SoftAP Demo UI собрана по оригинальному layout'у.");
+        Debug.Log("Wi-Fi Direct SoftAP Demo UI assembled according to the original layout.");
     }
 
     // ================================================================

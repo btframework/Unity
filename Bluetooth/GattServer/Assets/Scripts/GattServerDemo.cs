@@ -17,9 +17,9 @@ public class GattServerDemo : MonoBehaviour
 
     // ---------------- Clients tree ----------------
     public Transform  clientsContent;
-    public GameObject clientNodePrefab;      // пустой контейнер с VerticalLayoutGroup
-    public GameObject clientRowPrefab;       // строка клиента (13 колонок)
-    public GameObject subscribedRowPrefab;   // дочерняя строка (характеристика)
+    public GameObject clientNodePrefab;      // empty container with VerticalLayoutGroup
+    public GameObject clientRowPrefab;       // client row (13 columns)
+    public GameObject subscribedRowPrefab;   // child row (characteristic)
 
     // ---------------- Notify ----------------
     public TMP_InputField dataInput;
@@ -52,12 +52,12 @@ public class GattServerDemo : MonoBehaviour
     {
         public wclGattServerClient Client;
         public GameObject Container;
-        public TableRowUI Row;                        // строка клиента
+        public TableRowUI Row;                        // client row
         public readonly List<TableRowUI> Subs = new List<TableRowUI>();
     }
 
     private readonly List<ClientNode> _clients = new List<ClientNode>();
-    private TableRowUI _selectedRow;                  // может быть строка клиента или строки-характеристики
+    private TableRowUI _selectedRow;                  // may be a client row or a subscribed (characteristic) row
 
     // ==================================================================
     //  Lifecycle
@@ -75,7 +75,7 @@ public class GattServerDemo : MonoBehaviour
         dataInput.contentType = TMP_InputField.ContentType.Alphanumeric;
         repeatsInput.contentType = TMP_InputField.ContentType.IntegerNumber;
 
-        // Инициализация данных — как в fmMain_Load
+        // Initialize data - same as in fmMain_Load
         for (uint i = 0; i < SHORT_DATA_LEN; i++)
             _shortData[i] = wclHelpers.LoByte(wclHelpers.LoWord(i + 1));
         for (uint i = 0; i < LONG_DATA_LEN; i++)
@@ -217,7 +217,7 @@ public class GattServerDemo : MonoBehaviour
         var row = rowGO.GetComponent<TableRowUI>();
         row.Init(OnSubscribedRowClicked);
         row.Tag = new SubTag { Node = node, Characteristic = ch };
-        row.SetCell(0, "");                             // пустая первая колонка
+        row.SetCell(0, "");                             // empty first column
         row.SetCell(1, ch.Uuid.ShortUuid.ToString("X4"));
         node.Subs.Add(row);
 
@@ -332,7 +332,7 @@ public class GattServerDemo : MonoBehaviour
 
     private void OnNotifyClicked()
     {
-        // Notify на клиента, к которому относится выбранная строка-характеристика
+        // Notify to the client that owns the selected subscribed (characteristic) row
         var sub = _selectedRow?.Tag as SubTag;
         if (sub == null) { Trace("Select subscribed characteristic"); return; }
 
@@ -395,7 +395,7 @@ public class GattServerDemo : MonoBehaviour
 
         if (repeats > 20) { Trace("Too many notification repeats"); return; }
 
-        // Находим характеристику из выделения
+        // Get the characteristic from the current selection
         var sub = _selectedRow?.Tag as SubTag;
         if (sub == null) { Trace("Select subscribed characteristic"); return; }
         var ch = sub.Characteristic;
@@ -537,7 +537,7 @@ public class GattServerDemo : MonoBehaviour
         var prms = new wclGattLocalCharacteristicParameters { Descriptors = null, PresentationFormats = null };
         wclGattLocalCharacteristic ch;
 
-        // 0xFFF1 — empty
+        // 0xFFF1 - empty
         Trace8("Add empty characteristic");
         uuid.ShortUuid = 0xFFF1;
         prms.Props = 0;
@@ -545,7 +545,7 @@ public class GattServerDemo : MonoBehaviour
         if (!AddCh(service, uuid, prms, out ch, 12, "Add empty characteristic")) return false;
         Trace12("Empty characteristic added");
 
-        // 0xFFF2 — short readable
+        // 0xFFF2 - short readable
         Trace8("Add short readable characteristic");
         uuid.ShortUuid = 0xFFF2;
         prms.Props = wclGattLocalCharacteristicProperty.cpReadable;
@@ -553,7 +553,7 @@ public class GattServerDemo : MonoBehaviour
         if (!AddCh(service, uuid, prms, out ch, 12, "Add short readable characteristic")) return false;
         Trace12("Short readable characteristic added");
 
-        // 0xFFF3 — long readable
+        // 0xFFF3 - long readable
         Trace8("Add long readable characteristic");
         uuid.ShortUuid = 0xFFF3;
         prms.Props = wclGattLocalCharacteristicProperty.cpReadable;
@@ -561,7 +561,7 @@ public class GattServerDemo : MonoBehaviour
         if (!AddCh(service, uuid, prms, out ch, 12, "Add long readable characteristic")) return false;
         Trace12("Long readable characteristic added");
 
-        // 0xFFF4 — writable
+        // 0xFFF4 - writable
         Trace8("Add writable characteristic");
         uuid.ShortUuid = 0xFFF4;
         prms.Props = wclGattLocalCharacteristicProperty.cpWritable |
@@ -570,7 +570,7 @@ public class GattServerDemo : MonoBehaviour
         if (!AddCh(service, uuid, prms, out ch, 12, "Add writable characteristic")) return false;
         Trace12("Writable characteristic added");
 
-        // 0xFFF5 — notifiable
+        // 0xFFF5 - notifiable
         Trace8("Add notifiable characteristic");
         uuid.ShortUuid = 0xFFF5;
         prms.Props = wclGattLocalCharacteristicProperty.cpNotifiable;
@@ -578,7 +578,7 @@ public class GattServerDemo : MonoBehaviour
         if (!AddCh(service, uuid, prms, out ch, 12, "Add notifiable characteristic")) return false;
         Trace12("Notifiable characteristic added");
 
-        // 0xFFF6 — indicatable
+        // 0xFFF6 - indicatable
         Trace8("Add indicatable characteristic");
         uuid.ShortUuid = 0xFFF6;
         prms.Props = wclGattLocalCharacteristicProperty.cpIndicatable;
@@ -627,7 +627,7 @@ public class GattServerDemo : MonoBehaviour
 
     private void SelectRow(TableRowUI row)
     {
-        // Сброс выделения у всех строк
+        // Clear selection on all rows
         foreach (var n in _clients)
         {
             n.Row.SetSelected(false);

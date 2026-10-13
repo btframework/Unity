@@ -202,7 +202,7 @@ public class WiFiClientDemo : MonoBehaviour
 
     private void Update()
     {
-        // Ничего не делаем, всё по кнопкам.
+        // Nothing to do here - everything is button driven.
     }
 
     // ==================================================================

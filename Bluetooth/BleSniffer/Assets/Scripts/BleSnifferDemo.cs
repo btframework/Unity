@@ -34,7 +34,7 @@ public class BleSnifferDemo : MonoBehaviour
 
     private void Start()
     {
-        // Значения по умолчанию
+        // Defaults
         if (channelDropdown != null)
         {
             channelDropdown.ClearOptions();

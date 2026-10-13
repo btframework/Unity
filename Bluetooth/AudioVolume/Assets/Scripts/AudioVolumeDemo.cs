@@ -40,11 +40,8 @@ public class AudioVolumeDemo : MonoBehaviour
 
     private bool  _timerEnabled;
     private float _timerAccum;
-    private const float TimerInterval = 0.1f;   // аналог WinForms Timer (100 мс по умолчанию)
+    private const float TimerInterval = 0.1f;
 
-    // ==================================================================
-    //  Lifecycle
-    // ==================================================================
     private void Awake()
     {
         openButton .onClick.AddListener(OnOpenClicked);
@@ -76,7 +73,6 @@ public class AudioVolumeDemo : MonoBehaviour
         _audioVolume.OnDisconnected += AudioVolumeDisconnected;
         _audioVolume.OnChanged      += AudioVolumeChanged;
 
-        // Начальные состояния UI
         masterBar   .gameObject.SetActive(false);
         masterSlider.gameObject.SetActive(false);
         muteToggle  .gameObject.SetActive(false);
@@ -131,9 +127,6 @@ public class AudioVolumeDemo : MonoBehaviour
         }
     }
 
-    // ==================================================================
-    //  Switcher events
-    // ==================================================================
     private void AudioSwitcherOpened(object sender, EventArgs e)
     {
         Trace("Audio switcher opened");
@@ -197,9 +190,6 @@ public class AudioVolumeDemo : MonoBehaviour
         DeleteDevice(id);
     }
 
-    // ==================================================================
-    //  Meter events
-    // ==================================================================
     private void AudioMeterOpened(object sender, EventArgs e)
     {
         Trace("Audio meter opened");
@@ -228,14 +218,14 @@ public class AudioVolumeDemo : MonoBehaviour
 
         if (channels == 0)
         {
-            Trace("No mettering channels available");
+            Trace("No metering channels available");
             _audioMeter.Close();
             return;
         }
 
         Trace("Channels: " + channels);
 
-        // Удаляем прежние бары
+        // Remove previous bars
         for (int i = channelsContainer.childCount - 1; i >= 0; i--)
             Destroy(channelsContainer.GetChild(i).gameObject);
 
@@ -398,12 +388,12 @@ public class AudioVolumeDemo : MonoBehaviour
     // ==================================================================
     private void AddDevice(wclAudioDevice device)
     {
-        // Как в оригинале — добавляем только активные render-устройства.
+        // As in the original - add only active render devices.
         if (device.State != wclAudioDeviceState.asActive) return;
         if (device.Flow  != wclAudioDeviceDataFlow.dfRender) return;
 
-        // В оригинале дубликаты не отсеивались, но добавим простую защиту —
-        // иначе на некоторых драйверах список может задвоиться.
+        // The original did not filter duplicates, but we add a simple guard -
+        // otherwise on some drivers the list may be duplicated.
         if (_endpointIds.Contains(device.Id)) return;
 
         _endpointIds.Add(device.Id);
@@ -439,7 +429,7 @@ public class AudioVolumeDemo : MonoBehaviour
                 return;
             }
         }
-        // Найти «мультимедийное» устройство не удалось — оставляем как есть.
+        // Failed to find a "multimedia" device - leave as is.
     }
 
     private void RefreshEndpointsDropdown()
@@ -460,8 +450,8 @@ public class AudioVolumeDemo : MonoBehaviour
         Int32 res = _audioMeter.GetPeak(out peak);
         if (res == wclErrors.WCL_E_SUCCESS)
         {
-            // Аналог WinForms-логики: если виден слайдер громкости,
-            // пик умножается на положение слайдера (0..100).
+            // Same as the WinForms logic: if the volume slider is visible,
+            // the peak is multiplied by the slider position (0..100).
             float display;
             if (masterSlider.gameObject.activeSelf)
                 display = peak * (masterSlider.value / 100f);
