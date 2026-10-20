@@ -2,8 +2,10 @@
 using System.IO;
 using TMPro;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public static class SerialMonitorSceneBuilder
@@ -17,12 +19,17 @@ public static class SerialMonitorSceneBuilder
     [MenuItem("Tools/Serial Monitor/Build Scene")]
     public static void BuildScene()
     {
+        // --- 0. Make sure Assets/Prefabs exists as a real asset folder ---
+        EnsureAssetFolder(PrefabsFolder);
+
+        // --- 1. Clean up previous build ---
         DestroyIfExists("SerialMonitorUI");
         DestroyIfExists("SerialMonitorDemo");
         DestroyIfExists("EventSystem");
 
         EnsureEventSystem();
 
+        // --- 2. Canvas ---
         var canvasGO = CreateUI("SerialMonitorUI", null);
         var canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -45,14 +52,14 @@ public static class SerialMonitorSceneBuilder
         var btEnable     = MakeButton("BtEnable",     "Enable",      root, 472, 12, 75, 23);
 
         // ============================================================
-        //  Devices table (12, 41) 535x182 with two alternate header bars
+        //  Devices table
         //  Serial: 3 columns 80 | 350 | 70
         //  USB:    7 columns 250 | 250 | 50 | 50 | 250 | 200 | 70
         // ============================================================
-        var serialWidths = new[] { 80f, 350f, 70f };
+        var serialWidths  = new[] { 80f, 350f, 70f };
         var serialHeaders = new[] { "Device name", "Friendly name", "IsModem" };
 
-        var usbWidths = new[] { 250f, 250f, 50f, 50f, 250f, 200f, 70f };
+        var usbWidths  = new[] { 250f, 250f, 50f, 50f, 250f, 200f, 70f };
         var usbHeaders = new[] { "Instance", "Friendly name", "VID", "PID", "Class", "Manufacturer", "Enabled" };
 
         // --- Serial header ---
@@ -89,8 +96,8 @@ public static class SerialMonitorSceneBuilder
         // ============================================================
         //  Prefabs
         // ============================================================
-        var serialRow = MakeTableRowPrefab("SerialMonitorSerialRow", serialWidths, 22f);
-        var usbRow    = MakeTableRowPrefab("SerialMonitorUsbRow",    usbWidths,    22f);
+        var serialRow = MakeTableRowPrefab("SerialMonitorSerialRow", serialWidths,  22f);
+        var usbRow    = MakeTableRowPrefab("SerialMonitorUsbRow",    usbWidths,     22f);
         var logRow    = MakeTableRowPrefab("SerialMonitorLogRow",    new[] { 525f }, 20f);
 
         // ============================================================
@@ -118,13 +125,29 @@ public static class SerialMonitorSceneBuilder
         demo.logContent   = logContent;
         demo.logRowPrefab = logRow;
 
+        // ============================================================
+        //  Save — critical, otherwise the build will ship an empty scene
+        // ============================================================
+        AssetDatabase.SaveAssets();
+
+        var scene = EditorSceneManager.GetActiveScene();
+        if (scene.IsValid())
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+        else
+        {
+            Debug.LogWarning("Serial Monitor: active scene is invalid. " +
+                             "Please save the scene manually (Ctrl+S), otherwise the build will be empty.");
+        }
+
+        AssetDatabase.Refresh();
+
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        Debug.Log("Serial Monitor Demo UI built using the original layout.");
+        Debug.Log("Serial Monitor Demo UI built using the original layout. Scene saved.");
     }
 
     // ================================================================
@@ -259,7 +282,7 @@ public static class SerialMonitorSceneBuilder
 
     private static GameObject MakeTableRowPrefab(string name, float[] widths, float rowHeight)
     {
-        if (!Directory.Exists(PrefabsFolder)) Directory.CreateDirectory(PrefabsFolder);
+        EnsureAssetFolder(PrefabsFolder);
 
         var root = CreateUI(name, null);
         var rt = root.GetComponent<RectTransform>();
@@ -269,8 +292,7 @@ public static class SerialMonitorSceneBuilder
 
         float totalWidth = 8;
         for (int i = 0; i < widths.Length; i++) totalWidth += widths[i];
-
-        rt.sizeDelta = new Vector2(totalWidth, rowHeight);   // <-- set the actual width here
+        rt.sizeDelta = new Vector2(totalWidth, rowHeight);   // set the actual width here
 
         var img = root.AddComponent<Image>();
         img.color = new Color(0, 0, 0, 0.03f);
@@ -306,9 +328,21 @@ public static class SerialMonitorSceneBuilder
         ui.normalColor   = new Color(0, 0, 0, 0.03f);
         ui.selectedColor = new Color(0.2f, 0.6f, 1f, 0.35f);
 
-        var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/" + name + ".prefab");
+        string assetPath = PrefabsFolder + "/" + name + ".prefab";
+
+        // Delete the old prefab (if any) so SaveAsPrefabAsset doesn't complain
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(assetPath) != null)
+            AssetDatabase.DeleteAsset(assetPath);
+
+        var prefab = PrefabUtility.SaveAsPrefabAsset(root, assetPath);
         Object.DestroyImmediate(root);
+
+        AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+
+        if (prefab == null)
+            Debug.LogError($"Serial Monitor: failed to create prefab at {assetPath}");
+
         return prefab;
     }
 
@@ -343,6 +377,28 @@ public static class SerialMonitorSceneBuilder
         var go = new GameObject(name, typeof(RectTransform));
         if (parent != null) go.transform.SetParent(parent, false);
         return go;
+    }
+
+    /// <summary>
+    /// Ensures the folder exists AND is registered in the AssetDatabase.
+    /// Directory.CreateDirectory alone is not enough — Unity will not see the new folder.
+    /// </summary>
+    private static void EnsureAssetFolder(string assetFolder)
+    {
+        if (AssetDatabase.IsValidFolder(assetFolder)) return;
+
+        // assetFolder is expected in the form "Assets/Foo" or "Assets/Foo/Bar"
+        string parent = Path.GetDirectoryName(assetFolder).Replace('\\', '/');
+        string leaf   = Path.GetFileName(assetFolder);
+
+        if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(leaf)) return;
+
+        // Recursively ensure the parent exists first
+        if (!AssetDatabase.IsValidFolder(parent))
+            EnsureAssetFolder(parent);
+
+        AssetDatabase.CreateFolder(parent, leaf);
+        AssetDatabase.Refresh();
     }
 }
 #endif

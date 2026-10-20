@@ -258,6 +258,11 @@ public class SerialOppServerDemo : MonoBehaviour
             Destroy(parent.GetChild(i).gameObject);
     }
 
+    /// <summary>
+    /// Appends a line to the log list. The row prefab already has its cells
+    /// array populated by the scene builder, so no per-instance fixups are
+    /// needed here.
+    /// </summary>
     private void Log(string msg)
     {
         Debug.Log("[SerialOppServer] " + msg);
@@ -265,8 +270,13 @@ public class SerialOppServerDemo : MonoBehaviour
 
         var go = Instantiate(logRowPrefab, logContent);
         var row = go.GetComponent<TableRowUI>();
-        row.Init(null);
-        row.SetCell(0, msg);
+        if (row != null)
+            row.SetCell(0, msg);
+        else
+        {
+            var txt = go.GetComponentInChildren<TMP_Text>();
+            if (txt != null) txt.text = msg;
+        }
 
         var sr = logContent.GetComponentInParent<ScrollRect>();
         if (sr != null)

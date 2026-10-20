@@ -2,8 +2,10 @@
 using System.IO;
 using TMPro;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public static class SerialClientSceneBuilder
@@ -17,12 +19,17 @@ public static class SerialClientSceneBuilder
     [MenuItem("Tools/Serial Client/Build Scene")]
     public static void BuildScene()
     {
+        // --- 0. Make sure Assets/Prefabs exists as a real asset folder ---
+        EnsureAssetFolder(PrefabsFolder);
+
+        // --- 1. Clean up previous build ---
         DestroyIfExists("SerialClientUI");
         DestroyIfExists("SerialClientDemo");
         DestroyIfExists("EventSystem");
 
         EnsureEventSystem();
 
+        // --- 2. Canvas ---
         var canvasGO = CreateUI("SerialClientUI", null);
         var canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -285,13 +292,29 @@ public static class SerialClientSceneBuilder
         demo.eventsContent = eventsContent;
         demo.eventRowPrefab = eventRow;
 
+        // ============================================================
+        //  Save — critical, otherwise the build will ship an empty scene
+        // ============================================================
+        AssetDatabase.SaveAssets();
+
+        var scene = EditorSceneManager.GetActiveScene();
+        if (scene.IsValid())
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+        else
+        {
+            Debug.LogWarning("Serial Client: active scene is invalid. " +
+                             "Please save the scene manually (Ctrl+S), otherwise the build will be empty.");
+        }
+
+        AssetDatabase.Refresh();
+
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        Debug.Log("Serial Client Demo UI built using the original layout.");
+        Debug.Log("Serial Client Demo UI built using the original layout. Scene saved.");
     }
 
     // ================================================================
@@ -493,7 +516,8 @@ public static class SerialClientSceneBuilder
         vpRect.anchorMin = Vector2.zero; vpRect.anchorMax = Vector2.one;
         vpRect.offsetMin = Vector2.zero; vpRect.offsetMax = Vector2.zero;
         var vpImg = viewport.AddComponent<Image>();
-        vpImg.color = new Color(1, 1, 1, 0.001f);
+        // FIX: alpha must be 1 so Mask does not multiply child alpha to 0.
+        vpImg.color = new Color(1, 1, 1, 1f);
         var vpMask = viewport.AddComponent<Mask>();
         vpMask.showMaskGraphic = false;
 
@@ -577,7 +601,8 @@ public static class SerialClientSceneBuilder
         var viewport = CreateUI("Viewport", root.transform);
         StretchFull(viewport);
         var vpImg = viewport.AddComponent<Image>();
-        vpImg.color = new Color(1, 1, 1, 0.001f);
+        // FIX: alpha must be 1 so Mask does not multiply child alpha to 0.
+        vpImg.color = new Color(1, 1, 1, 1f);
         var vpMask = viewport.AddComponent<Mask>();
         vpMask.showMaskGraphic = false;
 
@@ -600,10 +625,13 @@ public static class SerialClientSceneBuilder
         var vlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
         vlg.spacing = 0;
         vlg.padding = new RectOffset(0, 0, 0, 0);
-        vlg.childForceExpandWidth  = true;
+        // FIX: match SerialMonitorSceneBuilder — VLG does not control the child
+        // width, so the row's own sizeDelta.x defines how wide it is. Without
+        // this the rows render with zero width under IL2CPP.
+        vlg.childForceExpandWidth  = false;
         vlg.childForceExpandHeight = false;
-        vlg.childControlWidth  = true;
-        vlg.childControlHeight = true;
+        vlg.childControlWidth      = false;
+        vlg.childControlHeight     = false;
 
         var csf = content.gameObject.AddComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -611,11 +639,20 @@ public static class SerialClientSceneBuilder
 
     private static GameObject MakeTableRowPrefab(string name, float[] widths, float rowHeight)
     {
-        if (!Directory.Exists(PrefabsFolder)) Directory.CreateDirectory(PrefabsFolder);
+        EnsureAssetFolder(PrefabsFolder);
 
         var root = CreateUI(name, null);
         var rt = root.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, rowHeight);
+        // FIX: top-left anchor and a real width matching SerialMonitor's row
+        // prefab. Without explicit anchors and sizeDelta the row has zero width.
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+
+        float totalWidth = 8;
+        for (int i = 0; i < widths.Length; i++) totalWidth += widths[i];
+
+        rt.sizeDelta = new Vector2(totalWidth, rowHeight);
 
         var img = root.AddComponent<Image>();
         img.color = new Color(0, 0, 0, 0.03f);
@@ -655,9 +692,21 @@ public static class SerialClientSceneBuilder
         ui.normalColor   = new Color(0, 0, 0, 0.03f);
         ui.selectedColor = new Color(0.2f, 0.6f, 1f, 0.35f);
 
-        var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/" + name + ".prefab");
+        string assetPath = PrefabsFolder + "/" + name + ".prefab";
+
+        // Delete the old prefab (if any) so SaveAsPrefabAsset doesn't complain
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(assetPath) != null)
+            AssetDatabase.DeleteAsset(assetPath);
+
+        var prefab = PrefabUtility.SaveAsPrefabAsset(root, assetPath);
         Object.DestroyImmediate(root);
+
+        AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+
+        if (prefab == null)
+            Debug.LogError($"Serial Client: failed to create prefab at {assetPath}");
+
         return prefab;
     }
 
@@ -692,6 +741,28 @@ public static class SerialClientSceneBuilder
         var go = new GameObject(name, typeof(RectTransform));
         if (parent != null) go.transform.SetParent(parent, false);
         return go;
+    }
+
+    /// <summary>
+    /// Ensures the folder exists AND is registered in the AssetDatabase.
+    /// Directory.CreateDirectory alone is not enough — Unity will not see the new folder.
+    /// </summary>
+    private static void EnsureAssetFolder(string assetFolder)
+    {
+        if (AssetDatabase.IsValidFolder(assetFolder)) return;
+
+        // assetFolder is expected in the form "Assets/Foo" or "Assets/Foo/Bar"
+        string parent = Path.GetDirectoryName(assetFolder).Replace('\\', '/');
+        string leaf   = Path.GetFileName(assetFolder);
+
+        if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(leaf)) return;
+
+        // Recursively ensure the parent exists first
+        if (!AssetDatabase.IsValidFolder(parent))
+            EnsureAssetFolder(parent);
+
+        AssetDatabase.CreateFolder(parent, leaf);
+        AssetDatabase.Refresh();
     }
 }
 #endif

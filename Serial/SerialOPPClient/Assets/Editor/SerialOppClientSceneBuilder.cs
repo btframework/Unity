@@ -2,8 +2,10 @@
 using System.IO;
 using TMPro;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public static class SerialOppClientSceneBuilder
@@ -17,6 +19,8 @@ public static class SerialOppClientSceneBuilder
     [MenuItem("Tools/Serial OPP Client/Build Scene")]
     public static void BuildScene()
     {
+        EnsureAssetFolder(PrefabsFolder);
+
         DestroyIfExists("SerialOppClientUI");
         DestroyIfExists("SerialOppClientDemo");
         DestroyIfExists("EventSystem");
@@ -34,32 +38,20 @@ public static class SerialOppClientSceneBuilder
 
         var root = canvasGO.transform;
 
-        // ============================================================
-        //  Top row
-        // ============================================================
         var laSelectComPort = MakeLabel("LaSelectComPort", "Select COM Port", root, 12, 13, 100, 13);
         var ddPorts         = MakeDropdown("DdPorts", root, 104, 12, 152, 21, new string[0]);
         var btRefresh       = MakeButton("BtRefresh",    "Refresh",    root, 262, 10, 75, 23);
         var btConnect       = MakeButton("BtConnect",    "Connect",    root, 343, 10, 75, 23);
         var btDisconnect    = MakeButton("BtDisconnect", "Disconnect", root, 424, 10, 75, 23);
 
-        // ============================================================
-        //  OBEX row
-        // ============================================================
         var btObexConnect    = MakeButton("BtObexConnect",    "OBEX connect",    root, 15,  39, 106, 23);
         var btObexDisconnect = MakeButton("BtObexDisconnect", "OBEX disconnect", root, 127, 39, 106, 23);
 
-        // ============================================================
-        //  File row
-        // ============================================================
         var laFilePath   = MakeLabel("LaFilePath", "File path", root, 12, 69, 55, 13);
         var edFilePath   = MakeInputField("EdFilePath", root, 65, 68, 272, 20, "");
         var btSelectFile = MakeButton("BtSelectFile", "Select file", root, 343, 66, 75, 23);
         var btSendFile   = MakeButton("BtSendFile",   "Send file",   root, 424, 66, 75, 23);
 
-        // ============================================================
-        //  ProgressBar (15, 94) 484x23
-        // ============================================================
         var pbGO = CreateUI("ProgressBar", root);
         Place(pbGO, 15, 94, 484, 23);
 
@@ -86,26 +78,14 @@ public static class SerialOppClientSceneBuilder
         progressLabel.fontSize = 12;
         progressLabel.raycastTarget = false;
 
-        // ============================================================
-        //  Clear (424, 123) 75x23
-        // ============================================================
         var btClear = MakeButton("BtClear", "Clear", root, 424, 123, 75, 23);
 
-        // ============================================================
-        //  Log (15, 152) 484x290
-        // ============================================================
         var logScroll  = MakeScrollView("LogScroll", root, 15, 152, 484, 290, false);
         var logContent = logScroll.transform.Find("Viewport/Content");
         AddVerticalListGroup(logContent);
 
-        // ============================================================
-        //  Prefabs
-        // ============================================================
         var logRow = MakeTableRowPrefab("SerialOppClientLogRow", new[] { 478f }, 20f);
 
-        // ============================================================
-        //  Main GameObject + links
-        // ============================================================
         var demoGO = new GameObject("SerialOppClientDemo");
         var demo = demoGO.AddComponent<SerialOppClientDemo>();
 
@@ -130,18 +110,28 @@ public static class SerialOppClientSceneBuilder
         demo.logContent   = logContent;
         demo.logRowPrefab = logRow;
 
+        AssetDatabase.SaveAssets();
+
+        var scene = EditorSceneManager.GetActiveScene();
+        if (scene.IsValid())
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+        else
+        {
+            Debug.LogWarning("Serial OPP Client: active scene is invalid. " +
+                             "Please save the scene manually (Ctrl+S), otherwise the build will be empty.");
+        }
+
+        AssetDatabase.Refresh();
+
         Selection.activeGameObject = demoGO;
         EditorGUIUtility.PingObject(demoGO);
 
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        Debug.Log("Serial OPP Client Demo UI built.");
+        Debug.Log("Serial OPP Client Demo UI built. Scene saved.");
     }
 
-    // ================================================================
-    //  Position
-    // ================================================================
     private static void Place(GameObject go, float x, float y, float w, float h)
     {
         var rt = go.GetComponent<RectTransform>();
@@ -152,9 +142,6 @@ public static class SerialOppClientSceneBuilder
         rt.sizeDelta = new Vector2(w, h);
     }
 
-    // ================================================================
-    //  Controls
-    // ================================================================
     private static Button MakeButton(string name, string label, Transform parent,
         float x, float y, float w, float h)
     {
@@ -284,7 +271,9 @@ public static class SerialOppClientSceneBuilder
 
         var tScroll = template.AddComponent<ScrollRect>();
         tScroll.horizontal = false;
-        template.AddComponent<RectMask2D>();  // Use Mask
+
+        // RectMask2D is enough here — it does not require an Image on the viewport
+        template.AddComponent<RectMask2D>();
 
         var viewport = CreateUI("Viewport", template.transform);
         StretchFull(viewport);
@@ -366,7 +355,9 @@ public static class SerialOppClientSceneBuilder
 
         var viewport = CreateUI("Viewport", root.transform);
         StretchFull(viewport);
-        viewport.AddComponent<RectMask2D>();  // Use Mask + Image
+
+        // RectMask2D does not need an Image — cleaner and lighter than Mask
+        viewport.AddComponent<RectMask2D>();
 
         var content = CreateUI("Content", viewport.transform);
         var cRect = content.GetComponent<RectTransform>();
@@ -387,10 +378,14 @@ public static class SerialOppClientSceneBuilder
         var vlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
         vlg.spacing = 0;
         vlg.padding = new RectOffset(0, 0, 0, 0);
-        vlg.childForceExpandWidth  = true;
+
+        // Same mode as SerialMonitorSceneBuilder / SerialClientSceneBuilder:
+        // the VLG must not control the child width, otherwise the row is
+        // computed as zero-width (no LayoutElement.preferredWidth on prefab).
+        vlg.childForceExpandWidth  = false;
         vlg.childForceExpandHeight = false;
-        vlg.childControlWidth  = true;
-        vlg.childControlHeight = true;
+        vlg.childControlWidth      = false;
+        vlg.childControlHeight     = false;
 
         var csf = content.gameObject.AddComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -398,11 +393,19 @@ public static class SerialOppClientSceneBuilder
 
     private static GameObject MakeTableRowPrefab(string name, float[] widths, float rowHeight)
     {
-        if (!Directory.Exists(PrefabsFolder)) Directory.CreateDirectory(PrefabsFolder);
+        EnsureAssetFolder(PrefabsFolder);
 
         var root = CreateUI(name, null);
         var rt = root.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, rowHeight);
+
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+
+        float totalWidth = 8;
+        for (int i = 0; i < widths.Length; i++) totalWidth += widths[i];
+
+        rt.sizeDelta = new Vector2(totalWidth, rowHeight);
 
         var img = root.AddComponent<Image>();
         img.color = new Color(1, 1, 1, 0.03f);
@@ -426,7 +429,10 @@ public static class SerialOppClientSceneBuilder
 
             var t = cellGO.AddComponent<TextMeshProUGUI>();
             t.text = "";
-            t.color = Color.white;
+            // FIX: the scroll view background is white; text must be dark,
+            // otherwise it is invisible. SerialMonitor and SerialClient both
+            // use Color.black here — SerialOppClient was the odd one out.
+            t.color = Color.black;
             t.fontSize = 11;
             t.alignment = TextAlignmentOptions.MidlineLeft;
             t.enableWordWrapping = false;
@@ -442,15 +448,23 @@ public static class SerialOppClientSceneBuilder
         ui.normalColor   = new Color(1, 1, 1, 0.03f);
         ui.selectedColor = new Color(0.2f, 0.6f, 1f, 0.35f);
 
-        var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/" + name + ".prefab");
+        string assetPath = PrefabsFolder + "/" + name + ".prefab";
+
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(assetPath) != null)
+            AssetDatabase.DeleteAsset(assetPath);
+
+        var prefab = PrefabUtility.SaveAsPrefabAsset(root, assetPath);
         Object.DestroyImmediate(root);
+
+        AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+
+        if (prefab == null)
+            Debug.LogError($"Serial OPP Client: failed to create prefab at {assetPath}");
+
         return prefab;
     }
 
-    // ================================================================
-    //  Misc
-    // ================================================================
     private static void StretchFull(GameObject go)
     {
         var rt = go.GetComponent<RectTransform>();
@@ -479,6 +493,22 @@ public static class SerialOppClientSceneBuilder
         var go = new GameObject(name, typeof(RectTransform));
         if (parent != null) go.transform.SetParent(parent, false);
         return go;
+    }
+
+    private static void EnsureAssetFolder(string assetFolder)
+    {
+        if (AssetDatabase.IsValidFolder(assetFolder)) return;
+
+        string parent = Path.GetDirectoryName(assetFolder).Replace('\\', '/');
+        string leaf   = Path.GetFileName(assetFolder);
+
+        if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(leaf)) return;
+
+        if (!AssetDatabase.IsValidFolder(parent))
+            EnsureAssetFolder(parent);
+
+        AssetDatabase.CreateFolder(parent, leaf);
+        AssetDatabase.Refresh();
     }
 }
 #endif

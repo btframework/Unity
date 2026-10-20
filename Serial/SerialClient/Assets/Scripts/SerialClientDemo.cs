@@ -19,7 +19,7 @@ public class SerialClientDemo : MonoBehaviour
     public TMP_InputField writeTimeoutInput;
     public Button         setWriteTimeoutButton;
 
-    // ---------------- Config buttons ----------------
+    // ---------------- Config / buffers / comm-break buttons ----------------
     public Button getConfigButton;
     public Button setConfigButton;
     public Button getBuffersButton;
@@ -27,7 +27,7 @@ public class SerialClientDemo : MonoBehaviour
     public Button clearCommBreakButton;
     public Button setCommBreakButton;
 
-    // ---------------- Config fields (col 1) ----------------
+    // ---------------- Config col 1 ----------------
     public TMP_Text       baudRateLabel;
     public TMP_InputField baudRateInput;
     public TMP_Text       rtsControlLabel;
@@ -37,7 +37,7 @@ public class SerialClientDemo : MonoBehaviour
     public TMP_Text       xonLimLabel;
     public TMP_InputField xonLimInput;
 
-    // ---------------- Config fields (col 2) ----------------
+    // ---------------- Config col 2 ----------------
     public TMP_Text       dtrControlLabel;
     public TMP_Dropdown   dtrControlDropdown;
     public TMP_Text       byteSizeLabel;
@@ -59,14 +59,14 @@ public class SerialClientDemo : MonoBehaviour
     public TMP_Text       evtCharLabel;
     public TMP_InputField evtCharInput;
 
-    // ---------------- Config checkboxes (col 1) ----------------
+    // ---------------- Checkboxes col 1 ----------------
     public Toggle parityCheckToggle;
     public Toggle outxDsrFlowToggle;
     public Toggle txContinueOnXoffToggle;
     public Toggle errorCharReplaceToggle;
     public Toggle nullStripToggle;
 
-    // ---------------- Config checkboxes (col 2) ----------------
+    // ---------------- Checkboxes col 2 ----------------
     public Toggle outxCtsFlowToggle;
     public Toggle dsrSensitivityToggle;
     public Toggle outXToggle;
@@ -93,15 +93,15 @@ public class SerialClientDemo : MonoBehaviour
     public TMP_Text       writeConstantLabel;
     public TMP_InputField writeConstantInput;
 
-    // ---------------- Function / Purge ----------------
-    public TMP_Text     funcLabel;
-    public TMP_Dropdown funcDropdown;
-    public Button       funcButton;
-    public Toggle       purgeRxAbortToggle;
-    public Toggle       purgeRxClearToggle;
-    public Toggle       purgeTxAbortToggle;
-    public Toggle       purgeTxClearToggle;
-    public Button       purgeButton;
+    // ---------------- Function / Purge / Transmit / Flush ----------------
+    public TMP_Text       funcLabel;
+    public TMP_Dropdown   funcDropdown;
+    public Button         funcButton;
+    public Toggle         purgeRxAbortToggle;
+    public Toggle         purgeRxClearToggle;
+    public Toggle         purgeTxAbortToggle;
+    public Toggle         purgeTxClearToggle;
+    public Button         purgeButton;
     public TMP_Text       charCodeLabel;
     public TMP_InputField charInput;
     public Button         transmitButton;
@@ -129,39 +129,50 @@ public class SerialClientDemo : MonoBehaviour
     // ==================================================================
     private void Awake()
     {
-        enumButton           .onClick.AddListener(OnEnumClicked);
-        connectButton        .onClick.AddListener(OnConnectClicked);
-        disconnectButton     .onClick.AddListener(OnDisconnectClicked);
-        setWriteTimeoutButton.onClick.AddListener(OnSetWriteTimeoutClicked);
-        getConfigButton      .onClick.AddListener(OnGetConfigClicked);
-        setConfigButton      .onClick.AddListener(OnSetConfigClicked);
-        getBuffersButton     .onClick.AddListener(OnGetBuffersClicked);
-        setBuffersButton     .onClick.AddListener(OnSetBuffersClicked);
-        clearCommBreakButton .onClick.AddListener(OnClearCommBreakClicked);
-        setCommBreakButton   .onClick.AddListener(OnSetCommBreakClicked);
-        getTimeoutsButton    .onClick.AddListener(OnGetTimeoutsClicked);
-        setTimeoutsButton    .onClick.AddListener(OnSetTimeoutsClicked);
-        funcButton           .onClick.AddListener(OnFuncClicked);
-        purgeButton          .onClick.AddListener(OnPurgeClicked);
-        transmitButton       .onClick.AddListener(OnTransmitClicked);
-        flushBuffersButton   .onClick.AddListener(OnFlushBuffersClicked);
-        sendButton           .onClick.AddListener(OnSendClicked);
-        clearButton          .onClick.AddListener(() => ClearChildren(eventsContent));
+        enumButton           ?.onClick.AddListener(OnEnumClicked);
+        connectButton        ?.onClick.AddListener(OnConnectClicked);
+        disconnectButton     ?.onClick.AddListener(OnDisconnectClicked);
+        setWriteTimeoutButton?.onClick.AddListener(OnSetWriteTimeoutClicked);
+        getConfigButton      ?.onClick.AddListener(OnGetConfigClicked);
+        setConfigButton      ?.onClick.AddListener(OnSetConfigClicked);
+        getBuffersButton     ?.onClick.AddListener(OnGetBuffersClicked);
+        setBuffersButton     ?.onClick.AddListener(OnSetBuffersClicked);
+        clearCommBreakButton ?.onClick.AddListener(OnClearCommBreakClicked);
+        setCommBreakButton   ?.onClick.AddListener(OnSetCommBreakClicked);
+        getTimeoutsButton    ?.onClick.AddListener(OnGetTimeoutsClicked);
+        setTimeoutsButton    ?.onClick.AddListener(OnSetTimeoutsClicked);
+        funcButton           ?.onClick.AddListener(OnFuncClicked);
+        purgeButton          ?.onClick.AddListener(OnPurgeClicked);
+        transmitButton       ?.onClick.AddListener(OnTransmitClicked);
+        flushBuffersButton   ?.onClick.AddListener(OnFlushBuffersClicked);
+        sendButton           ?.onClick.AddListener(OnSendClicked);
+        clearButton          ?.onClick.AddListener(OnClearClicked);
     }
 
     private void Start()
     {
-        EnsureDropdown(rtsControlDropdown,  new[] { "rtsControlDisable", "rtsControlEnable", "rtsControlHandshake", "rtsControlToggle" }, -1);
-        EnsureDropdown(dtrControlDropdown,  new[] { "dtrControlDisable", "dtrControlEnable", "dtrControlHandshake" }, -1);
-        EnsureDropdown(parityDropdown,      new[] { "spNo", "spOdd", "spEven", "spMark", "spSpace" }, -1);
-        EnsureDropdown(stopBitsDropdown,    new[] { "sbOne", "sbOne5", "sbTwo" }, -1);
-        EnsureDropdown(byteSizeDropdown,    new[] { "4", "5", "6", "7", "8" }, -1);
-        EnsureDropdown(funcDropdown,        new[]
+        // Dropdown option lists must match the WinForms Designer exactly.
+        EnsureDropdown(rtsControlDropdown, new[]
+        {
+            "rtsControlDisable", "rtsControlEnable",
+            "rtsControlHandshake", "rtsControlToggle"
+        });
+        EnsureDropdown(dtrControlDropdown, new[]
+        {
+            "dtrControlDisable", "dtrControlEnable", "dtrControlHandshake"
+        });
+        EnsureDropdown(parityDropdown, new[]
+        {
+            "spNo", "spOdd", "spEven", "spMark", "spSpace"
+        });
+        EnsureDropdown(byteSizeDropdown, new[] { "4", "5", "6", "7", "8" });
+        EnsureDropdown(stopBitsDropdown, new[] { "sbOne", "sbOne5", "sbTwo" });
+        EnsureDropdown(funcDropdown, new[]
         {
             "escClrBreak", "escClrDtr", "escClrRts", "escSetBreak",
-            "escSetDtr", "escSetRts", "escSetXoff", "escSetXon"
-        }, 0);
-        EnsureDropdown(lineFeedDropdown, new[] { "None", "CR", "LF", "CR & LF" }, 0);
+            "escSetDtr",   "escSetRts", "escSetXoff", "escSetXon"
+        });
+        EnsureDropdown(lineFeedDropdown, new[] { "None", "CR", "LF", "CR & LF" });
 
         _client = new wclSerialClient();
         _client.OnConnect    += ClientConnect;
@@ -179,7 +190,12 @@ public class SerialClientDemo : MonoBehaviour
         ClearTimeouts();
         ClearBuffers();
 
-        writeTimeoutInput.text = _client.WriteTimeout.ToString();
+        if (writeTimeoutInput != null)
+            writeTimeoutInput.text = _client.WriteTimeout.ToString();
+
+        // WinForms sets cbFunc.SelectedIndex = 0 and cbLineFeed.SelectedIndex = 0
+        SetDropdownValue(funcDropdown,     0);
+        SetDropdownValue(lineFeedDropdown, 0);
     }
 
     private void OnDestroy()
@@ -204,7 +220,7 @@ public class SerialClientDemo : MonoBehaviour
     }
 
     // ==================================================================
-    //  Enum <-> index mappers (as in original)
+    //  Enum <-> index mappers (as in the WinForms original)
     // ==================================================================
     private static int DtrControlToIndex(wclSerialDtrControl c)
     {
@@ -217,9 +233,9 @@ public class SerialClientDemo : MonoBehaviour
         }
     }
 
-    private static wclSerialDtrControl IndexToDtrControl(int index)
+    private static wclSerialDtrControl IndexToDtrControl(int i)
     {
-        switch (index)
+        switch (i)
         {
             case 0:  return wclSerialDtrControl.dtrControlDisable;
             case 1:  return wclSerialDtrControl.dtrControlEnable;
@@ -240,9 +256,9 @@ public class SerialClientDemo : MonoBehaviour
         }
     }
 
-    private static wclSerialRtsControl IndexToRtsControl(int index)
+    private static wclSerialRtsControl IndexToRtsControl(int i)
     {
-        switch (index)
+        switch (i)
         {
             case 0:  return wclSerialRtsControl.rtsControlDisable;
             case 1:  return wclSerialRtsControl.rtsControlEnable;
@@ -265,9 +281,9 @@ public class SerialClientDemo : MonoBehaviour
         }
     }
 
-    private static wclSerialParity IndexToParity(int index)
+    private static wclSerialParity IndexToParity(int i)
     {
-        switch (index)
+        switch (i)
         {
             case 0:  return wclSerialParity.spNo;
             case 1:  return wclSerialParity.spOdd;
@@ -289,9 +305,9 @@ public class SerialClientDemo : MonoBehaviour
         }
     }
 
-    private static wclSerialStopBits IndexToStopBits(int index)
+    private static wclSerialStopBits IndexToStopBits(int i)
     {
-        switch (index)
+        switch (i)
         {
             case 0:  return wclSerialStopBits.sbOne;
             case 1:  return wclSerialStopBits.sbOne5;
@@ -301,7 +317,7 @@ public class SerialClientDemo : MonoBehaviour
     }
 
     // ==================================================================
-    //  Config / timeouts / buffers helpers
+    //  Read configuration / timeouts / buffers
     // ==================================================================
     private void ReadConfiguration()
     {
@@ -313,25 +329,25 @@ public class SerialClientDemo : MonoBehaviour
             return;
         }
 
-        baudRateInput.text  = config.BaudRate.ToString();
-        xonLimInput.text    = config.XonLim.ToString();
-        xoffLimInput.text   = config.XoffLim.ToString();
-        xonCharInput.text   = config.XonChar.ToString();
-        xoffCharInput.text  = config.XoffChar.ToString();
+        baudRateInput .text = config.BaudRate.ToString();
+        xonLimInput   .text = config.XonLim.ToString();
+        xoffLimInput  .text = config.XoffLim.ToString();
+        xonCharInput  .text = config.XonChar.ToString();
+        xoffCharInput .text = config.XoffChar.ToString();
         errorCharInput.text = config.ErrorChar.ToString();
-        eofCharInput.text   = config.EofChar.ToString();
-        evtCharInput.text   = config.EvtChar.ToString();
+        eofCharInput  .text = config.EofChar.ToString();
+        evtCharInput  .text = config.EvtChar.ToString();
 
-        parityCheckToggle      .isOn = config.ParityCheck;
-        outxCtsFlowToggle      .isOn = config.OutxCtsFlow;
-        outxDsrFlowToggle      .isOn = config.OutxDsrFlow;
-        dsrSensitivityToggle   .isOn = config.DsrSensitivity;
-        txContinueOnXoffToggle .isOn = config.TxContinueOnXoff;
-        outXToggle             .isOn = config.OutX;
-        inXToggle              .isOn = config.InX;
-        errorCharReplaceToggle .isOn = config.ErrorCharReplace;
-        nullStripToggle        .isOn = config.NullStrip;
-        abortOnErrorToggle     .isOn = config.AbortOnError;
+        parityCheckToggle     .isOn = config.ParityCheck;
+        outxCtsFlowToggle     .isOn = config.OutxCtsFlow;
+        outxDsrFlowToggle     .isOn = config.OutxDsrFlow;
+        dsrSensitivityToggle  .isOn = config.DsrSensitivity;
+        txContinueOnXoffToggle.isOn = config.TxContinueOnXoff;
+        outXToggle            .isOn = config.OutX;
+        inXToggle             .isOn = config.InX;
+        errorCharReplaceToggle.isOn = config.ErrorCharReplace;
+        nullStripToggle       .isOn = config.NullStrip;
+        abortOnErrorToggle    .isOn = config.AbortOnError;
 
         SetDropdownValue(rtsControlDropdown, RtsControlToIndex(config.RtsControl));
         SetDropdownValue(dtrControlDropdown, DtrControlToIndex(config.DtrControl));
@@ -355,6 +371,22 @@ public class SerialClientDemo : MonoBehaviour
         readConstantInput   .text = times.ReadConstant.ToString();
         writeMultiplierInput.text = times.WriteMultiplier.ToString();
         writeConstantInput  .text = times.WriteConstant.ToString();
+    }
+
+    private void ReadBuffers()
+    {
+        UInt32 size;
+        Int32 res = _client.GetReadBufferSize(out size);
+        if (res != wclErrors.WCL_E_SUCCESS)
+            Log("Get read buffer size error: 0x" + res.ToString("X8"));
+        else
+            readBufferSizeInput.text = size.ToString();
+
+        res = _client.GetWriteBufferSize(out size);
+        if (res != wclErrors.WCL_E_SUCCESS)
+            Log("Get write buffer size error: 0x" + res.ToString("X8"));
+        else
+            writeBufferSizeInput.text = size.ToString();
     }
 
     private void ClearConfig()
@@ -401,22 +433,6 @@ public class SerialClientDemo : MonoBehaviour
         writeBufferSizeInput.text = "";
     }
 
-    private void ReadBuffers()
-    {
-        UInt32 size;
-        Int32 res = _client.GetReadBufferSize(out size);
-        if (res != wclErrors.WCL_E_SUCCESS)
-            Log("Get read buffer size error: 0x" + res.ToString("X8"));
-        else
-            readBufferSizeInput.text = size.ToString();
-
-        res = _client.GetWriteBufferSize(out size);
-        if (res != wclErrors.WCL_E_SUCCESS)
-            Log("Get write buffer size error: 0x" + res.ToString("X8"));
-        else
-            writeBufferSizeInput.text = size.ToString();
-    }
-
     private void EnumComPorts()
     {
         portsDropdown.ClearOptions();
@@ -431,8 +447,9 @@ public class SerialClientDemo : MonoBehaviour
 
         if (ports != null && ports.Count > 0)
         {
-            var names = new List<string>();
+            var names = new List<string>(ports.Count);
             foreach (var port in ports) names.Add(port.DeviceName);
+
             portsDropdown.AddOptions(names);
             portsDropdown.SetValueWithoutNotify(0);
             portsDropdown.RefreshShownValue();
@@ -440,13 +457,17 @@ public class SerialClientDemo : MonoBehaviour
     }
 
     // ==================================================================
-    //  Buttons - top row
+    //  Click handlers
     // ==================================================================
     private void OnEnumClicked() => EnumComPorts();
 
     private void OnConnectClicked()
     {
-        if (portsDropdown.options.Count == 0) { Log("Select COM port"); return; }
+        if (portsDropdown == null || portsDropdown.options.Count == 0)
+        {
+            Log("Select COM port");
+            return;
+        }
         Int32 res = _client.Connect(portsDropdown.options[portsDropdown.value].text);
         if (res != wclErrors.WCL_E_SUCCESS)
             Log("Error: 0x" + res.ToString("X8"));
@@ -464,22 +485,20 @@ public class SerialClientDemo : MonoBehaviour
         _client.WriteTimeout = ParseUInt(writeTimeoutInput.text, 0);
     }
 
-    // ==================================================================
-    //  Config / Buffers / Timeouts
-    // ==================================================================
-    private void OnGetConfigClicked()  => ReadConfiguration();
+    private void OnGetConfigClicked() => ReadConfiguration();
+
     private void OnSetConfigClicked()
     {
         var config = new wclSerialConfig
         {
-            BaudRate      = ParseUInt(baudRateInput.text, 0),
-            XonLim        = ParseUShort(xonLimInput.text, 0),
-            XoffLim       = ParseUShort(xoffLimInput.text, 0),
-            XonChar       = ParseByte(xonCharInput.text, 0),
-            XoffChar      = ParseByte(xoffCharInput.text, 0),
-            ErrorChar     = ParseByte(errorCharInput.text, 0),
-            EofChar       = ParseByte(eofCharInput.text, 0),
-            EvtChar       = ParseByte(evtCharInput.text, 0),
+            BaudRate  = ParseUInt(baudRateInput.text, 0),
+            XonLim    = ParseUShort(xonLimInput.text, 0),
+            XoffLim   = ParseUShort(xoffLimInput.text, 0),
+            XonChar   = ParseByte(xonCharInput.text, 0),
+            XoffChar  = ParseByte(xoffCharInput.text, 0),
+            ErrorChar = ParseByte(errorCharInput.text, 0),
+            EofChar   = ParseByte(eofCharInput.text, 0),
+            EvtChar   = ParseByte(evtCharInput.text, 0),
 
             ParityCheck      = parityCheckToggle.isOn,
             OutxCtsFlow      = outxCtsFlowToggle.isOn,
@@ -534,31 +553,32 @@ public class SerialClientDemo : MonoBehaviour
             Log("Set timeouts error: 0x" + res.ToString("X8"));
     }
 
-    // ==================================================================
-    //  Comm / Func / Purge / Transmit
-    // ==================================================================
     private void OnClearCommBreakClicked()
     {
         Int32 res = _client.ClearCommBreak();
-        if (res != wclErrors.WCL_E_SUCCESS) Log("Error: 0x" + res.ToString("X8"));
+        if (res != wclErrors.WCL_E_SUCCESS)
+            Log("Error: 0x" + res.ToString("X8"));
     }
 
     private void OnSetCommBreakClicked()
     {
         Int32 res = _client.SetCommBreak();
-        if (res != wclErrors.WCL_E_SUCCESS) Log("Error: 0x" + res.ToString("X8"));
+        if (res != wclErrors.WCL_E_SUCCESS)
+            Log("Error: 0x" + res.ToString("X8"));
     }
 
     private void OnFlushBuffersClicked()
     {
         Int32 res = _client.FlushBuffers();
-        if (res != wclErrors.WCL_E_SUCCESS) Log("Error: 0x" + res.ToString("X8"));
+        if (res != wclErrors.WCL_E_SUCCESS)
+            Log("Error: 0x" + res.ToString("X8"));
     }
 
     private void OnFuncClicked()
     {
         Int32 res = _client.EscapeCommFunction((wclSerialEscapeFunction)funcDropdown.value);
-        if (res != wclErrors.WCL_E_SUCCESS) Log("Error: 0x" + res.ToString("X8"));
+        if (res != wclErrors.WCL_E_SUCCESS)
+            Log("Error: 0x" + res.ToString("X8"));
     }
 
     private void OnPurgeClicked()
@@ -570,23 +590,25 @@ public class SerialClientDemo : MonoBehaviour
         if (purgeTxClearToggle.isOn) flags |= wclSerialPurgeFlag.purgeTxClear;
 
         Int32 res = _client.PurgeComm(flags);
-        if (res != wclErrors.WCL_E_SUCCESS) Log("Error: 0x" + res.ToString("X8"));
+        if (res != wclErrors.WCL_E_SUCCESS)
+            Log("Error: 0x" + res.ToString("X8"));
     }
 
     private void OnTransmitClicked()
     {
         Int32 res = _client.TransmitCommChar(ParseByte(charInput.text, 0));
-        if (res != wclErrors.WCL_E_SUCCESS) Log("Error: 0x" + res.ToString("X8"));
+        if (res != wclErrors.WCL_E_SUCCESS)
+            Log("Error: 0x" + res.ToString("X8"));
     }
 
     private void OnSendClicked()
     {
-        string str = textInput.text;
+        string str = textInput.text ?? "";
         switch (lineFeedDropdown.value)
         {
-            case 1: str += "\r";     break;
-            case 2: str += "\n";     break;
-            case 3: str += "\r\n";   break;
+            case 1: str += "\r";   break;
+            case 2: str += "\n";   break;
+            case 3: str += "\r\n"; break;
         }
 
         byte[] ansi = Encoding.ASCII.GetBytes(str);
@@ -598,8 +620,15 @@ public class SerialClientDemo : MonoBehaviour
             Log("Write error: 0x" + res.ToString("X8"));
     }
 
+    private void OnClearClicked()
+    {
+        if (eventsContent == null) return;
+        for (int i = eventsContent.childCount - 1; i >= 0; i--)
+            Destroy(eventsContent.GetChild(i).gameObject);
+    }
+
     // ==================================================================
-    //  Client events
+    //  wclSerialClient event handlers
     // ==================================================================
     private void ClientConnect(object s, Int32 error)
     {
@@ -643,13 +672,13 @@ public class SerialClientDemo : MonoBehaviour
         Log("Error: " + str);
 
         str = "";
-        if ((states & wclSerialCommunicationState.csCtsHold)   != 0) str += "csCtsHold ";
-        if ((states & wclSerialCommunicationState.csDsrHold)   != 0) str += "csDsrHold ";
-        if ((states & wclSerialCommunicationState.csRlsdHold)  != 0) str += "csRlsdHold ";
-        if ((states & wclSerialCommunicationState.csXoffHold)  != 0) str += "csXoffHold ";
-        if ((states & wclSerialCommunicationState.csXoffSent)  != 0) str += "csXoffSent ";
-        if ((states & wclSerialCommunicationState.csEof)       != 0) str += "csEof ";
-        if ((states & wclSerialCommunicationState.csTxim)      != 0) str += "csTxim ";
+        if ((states & wclSerialCommunicationState.csCtsHold)  != 0) str += "csCtsHold ";
+        if ((states & wclSerialCommunicationState.csDsrHold)  != 0) str += "csDsrHold ";
+        if ((states & wclSerialCommunicationState.csRlsdHold) != 0) str += "csRlsdHold ";
+        if ((states & wclSerialCommunicationState.csXoffHold) != 0) str += "csXoffHold ";
+        if ((states & wclSerialCommunicationState.csXoffSent) != 0) str += "csXoffSent ";
+        if ((states & wclSerialCommunicationState.csEof)      != 0) str += "csEof ";
+        if ((states & wclSerialCommunicationState.csTxim)     != 0) str += "csTxim ";
         Log("States: " + str);
     }
 
@@ -695,46 +724,51 @@ public class SerialClientDemo : MonoBehaviour
     private static void SetDropdownValue(TMP_Dropdown dd, int index)
     {
         if (dd == null) return;
+
         if (index < 0 || index >= dd.options.Count)
         {
             dd.SetValueWithoutNotify(-1);
-            dd.RefreshShownValue();
+            if (dd.captionText != null) dd.captionText.text = "";
             return;
         }
+
         dd.SetValueWithoutNotify(index);
         dd.RefreshShownValue();
     }
 
-    private static void EnsureDropdown(TMP_Dropdown dd, string[] options, int defaultValue)
+    private static void EnsureDropdown(TMP_Dropdown dd, string[] options)
     {
         if (dd == null) return;
-        if (dd.options == null || dd.options.Count != options.Length)
+
+        bool mismatch =
+            dd.options == null ||
+            dd.options.Count != options.Length;
+
+        if (mismatch)
         {
             dd.ClearOptions();
             dd.AddOptions(new List<string>(options));
         }
-        int v = defaultValue;
-        if (v < 0) v = 0;                                    // TMP does not support -1
-        dd.value = Mathf.Clamp(v, 0, options.Length - 1);
+
+        dd.SetValueWithoutNotify(0);
         dd.RefreshShownValue();
     }
 
-    private static void ClearChildren(Transform parent)
-    {
-        if (parent == null) return;
-        for (int i = parent.childCount - 1; i >= 0; i--)
-            Destroy(parent.GetChild(i).gameObject);
-    }
-
+    /// <summary>
+    /// Appends a line to the events list. The row prefab's anchors, sizeDelta
+    /// and Content's VerticalLayoutGroup are already set up by
+    /// SerialClientSceneBuilder, so no per-instance fixup is needed here.
+    /// </summary>
     private void Log(string msg)
     {
         Debug.Log("[SerialClient] " + msg);
+
         if (eventsContent == null || eventRowPrefab == null) return;
 
         var go = Instantiate(eventRowPrefab, eventsContent);
         var row = go.GetComponent<TableRowUI>();
-        row.Init(null);
-        row.SetCell(0, msg);
+        if (row != null)
+            row.SetCell(0, msg);
 
         var sr = eventsContent.GetComponentInParent<ScrollRect>();
         if (sr != null)

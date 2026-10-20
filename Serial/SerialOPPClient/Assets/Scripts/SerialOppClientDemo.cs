@@ -325,6 +325,11 @@ public class SerialOppClientDemo : MonoBehaviour
             Destroy(parent.GetChild(i).gameObject);
     }
 
+    /// <summary>
+    /// Appends a line to the log list. The row prefab is already correct
+    /// (anchors, pivot, sizeDelta and VLG mode are set up by the scene
+    /// builder), so no per-instance fixups are needed here.
+    /// </summary>
     private void Log(string msg)
     {
         Debug.Log("[SerialOppClient] " + msg);
@@ -332,8 +337,13 @@ public class SerialOppClientDemo : MonoBehaviour
 
         var go = Instantiate(logRowPrefab, logContent);
         var row = go.GetComponent<TableRowUI>();
-        row.Init(null);
-        row.SetCell(0, msg);
+        if (row != null)
+            row.SetCell(0, msg);
+        else
+        {
+            var txt = go.GetComponentInChildren<TMP_Text>();
+            if (txt != null) txt.text = msg;
+        }
 
         var sr = logContent.GetComponentInParent<ScrollRect>();
         if (sr != null)
