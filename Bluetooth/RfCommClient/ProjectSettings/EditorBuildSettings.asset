@@ -8,4 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Scenes/RfCommClient.unity
+    guid: 21e618606c19b704c87141e4b3bbabf9
   m_configObjects: {}
+  m_UseUCBPForAssetBundles: 0

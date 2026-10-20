@@ -1,670 +1,651 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using System.IO;
-using TMPro;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.EventSystems;
+using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
 
 public static class GattClientSceneBuilder
 {
-    private const string PrefabsFolder = "Assets/Prefabs";
+    private const float FormWidth  = 721f;
+    private const float FormHeight = 688f;
+    private const string ScenePath = "Assets/Scenes/GattClient.unity";
 
-    private static readonly string[] MitmOptions = new[]
-    {
-        "mitmProtectionNotRequired",
-        "mitmProtectionRequired",
-        "mitmProtectionNotRequiredBonding",
-        "mitmProtectionRequiredBonding",
-        "mitmProtectionNotRequiredGeneralBonding",
-        "mitmProtectionRequiredGeneralBonding",
-        "mitmProtectionNotDefined"
-    };
-
-    private static readonly string[] IoCapOptions = new[]
-    {
-        "iocapDisplayOnly", "iocapDisplayYesNo", "iocapKeyboardOnly",
-        "iocapNoInputNoOutput", "iocapDisplayKeyboard", "iocapNotDefined"
-    };
-
-    private static readonly string[] ProtectionOptions = new[]
-    {
-        "None", "Authentication", "Encryption", "Encryption And Authentication"
-    };
-
-    private static readonly string[] OpFlagOptions = new[]
-    {
-        "None", "Force Read From Device", "Force Read From Cache"
-    };
-
-    private static readonly string[] ParamsOptions = new[]
-    {
-        "Balanced", "PowerOptimized", "ThroughputOptimized", "Custom"
-    };
-
-    private static readonly string[] SubscribeOptions = new[]
-    {
-        "Notification", "Indication", "Manual"
-    };
-
-    private static readonly string[] WriteOptions = new[]
-    {
-        "With Response", "Without Response", "Auto Split", "Auto"
-    };
-
-    [MenuItem("Tools/GATT Client/Build Scene")]
+    [MenuItem("Tools/GattClient/Build Scene")]
     public static void BuildScene()
     {
-        DestroyIfExists("GattClientUI");
-        DestroyIfExists("GattClientDemo");
-        DestroyIfExists("EventSystem");
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        EnsureEventSystem();
+        var camGO = new GameObject("Main Camera");
+        camGO.tag = "MainCamera";
+        var cam = camGO.AddComponent<Camera>();
+        cam.orthographic = true;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0.94f, 0.94f, 0.94f);
+        camGO.transform.position = new Vector3(0, 0, -10);
 
-        // ---------- Canvas ----------
-        var canvasGO = CreateUI("GattClientUI", null);
-        var canvas = canvasGO.AddComponent<Canvas>();
+        var esGO = new GameObject("EventSystem");
+        esGO.AddComponent<EventSystem>();
+        esGO.AddComponent<StandaloneInputModule>();
+
+        var canvasGO = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        var canvas = canvasGO.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        var scaler = canvasGO.AddComponent<CanvasScaler>();
+        var scaler = canvasGO.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight = 0.5f;
-        canvasGO.AddComponent<GraphicRaycaster>();
+        scaler.referenceResolution = new Vector2(FormWidth, FormHeight);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 1f;
 
-        // ============================================================
-        //  Row 1: Discover | Terminate | Pair | Unpair | EnumPaired | MITM | IO Cap
-        // ============================================================
-        var r1 = MakeHBar("Row1", canvasGO.transform, 20, 40);
-        var btDiscover     = MakeButton("BtDiscover",     "Discover",    r1.transform, 140, 40);
-        var btTerminate    = MakeButton("BtTerminate",    "Terminate",   r1.transform, 140, 40);
-        var btPair         = MakeButton("BtPair",         "Pair",        r1.transform, 120, 40);
-        var btUnpair       = MakeButton("BtUnpair",       "Unpair",      r1.transform, 120, 40);
-        var btEnumPaired   = MakeButton("BtEnumPaired",   "Enum paired", r1.transform, 160, 40);
-        MakeLabel("MITM", r1.transform, 80, 40);
-        var ddMitm         = MakeDropdown("DdMitm", r1.transform, 320, 40, MitmOptions);
-        MakeLabel("IO Cap", r1.transform, 100, 40);
-        var ddIoCap        = MakeDropdown("DdIoCap", r1.transform, 220, 40, IoCapOptions);
+        CreatePanel(canvasGO.transform, "FormBackground", 0, 0, FormWidth, FormHeight,
+            new Color(0.94f, 0.94f, 0.94f));
 
-        // ============================================================
-        //  Row 2: Protection | OpFlag
-        // ============================================================
-        var r2 = MakeHBar("Row2", canvasGO.transform, 70, 40);
-        MakeLabel("Protection", r2.transform, 130, 40);
-        var ddProtection = MakeDropdown("DdProtection", r2.transform, 320, 40, ProtectionOptions);
-        MakeLabel("Operation flag", r2.transform, 160, 40);
-        var ddOpFlag = MakeDropdown("DdOpFlag", r2.transform, 320, 40, OpFlagOptions);
+        var root = canvasGO.transform;
 
-        // ============================================================
-        //  Devices table (Address | Name | Device type | Paired)
-        // ============================================================
-        var devWidths = new[] { 300f, 300f, 200f, 120f };
-        var devHeaders = new[] { "Address", "Name", "Device type", "Paired" };
-        var (devScroll, devContent) = MakeTable("DevicesScroll", canvasGO.transform,
-            new Vector2(20, -120), 170, devWidths, devHeaders);
+        // Row 1 (y=7..30)
+        var btDiscover       = CreateButton(root, "btDiscover", "Discover", 12, 7, 65, 23);
+        var btTerminate      = CreateButton(root, "btTerminate", "Terminate", 81, 7, 63, 23);
+        var btEnumPaired     = CreateButton(root, "btEnumPaired", "Enum paired", 150, 7, 75, 23);
+        CreateLabel(root, "laMitmProtection", "MITM", 231, 14, 35, 13);
+        var cbMitmProtection = CreateDropdown(root, "cbMitmProtection", new[] {
+            "mitmProtectionNotRequired", "mitmProtectionRequired",
+            "mitmProtectionNotRequiredBonding", "mitmProtectionRequiredBonding",
+            "mitmProtectionNotRequiredGeneralBonding", "mitmProtectionRequiredGeneralBonding",
+            "mitmProtectionNotDefined"
+        }, 292, 9, 185, 21, 0);
+        CreateLabel(root, "laIoCap", "IO Cap", 483, 14, 40, 13);
+        var cbIoCap = CreateDropdown(root, "cbIoCap", new[] {
+            "iocapDisplayOnly", "iocapDisplayYesNo", "iocapKeyboardOnly",
+            "iocapNoInputNoOutput", "iocapDisplayKeyboard", "iocapNotDefined"
+        }, 558, 11, 149, 21, 0);
 
-        // ============================================================
-        //  Row 3: Connect | Disconnect | ConnectOnRead | ForceIndications | GetServices | GetIncludedServices | GetParams | ParamsDd | SetParams
-        // ============================================================
-        var r3 = MakeHBar("Row3", canvasGO.transform, 320, 40);
-        var btConnect      = MakeButton("BtConnect", "Connect", r3.transform, 130, 40);
-        var btDisconnect   = MakeButton("BtDisconnect", "Disconnect", r3.transform, 140, 40);
-        var tgConnectOnRead= MakeToggle("TgConnectOnRead", "Connect on read", r3.transform, 220, 40);
-        var tgForceInd     = MakeToggle("TgForceIndications", "Force indications", r3.transform, 240, 40);
-        var btGetServices  = MakeButton("BtGetServices", "Get services", r3.transform, 160, 40);
-        var btGetInc       = MakeButton("BtGetIncludedServices", "Get included", r3.transform, 180, 40);
-        var btGetParams    = MakeButton("BtGetParams", "Get params", r3.transform, 150, 40);
-        var ddParams       = MakeDropdown("DdParams", r3.transform, 220, 40, ParamsOptions);
-        var btSetParams    = MakeButton("BtSetParams", "Set params", r3.transform, 150, 40);
+        // Row 2 (y=36..59)
+        var btPair       = CreateButton(root, "btPair", "Pair", 12, 36, 65, 23);
+        var btUnpair     = CreateButton(root, "btUnpair", "Unpair", 83, 36, 61, 23);
+        CreateLabel(root, "laProtection", "Protection", 231, 41, 55, 13);
+        var cbProtection = CreateDropdown(root, "cbProtection", new[] {
+            "None", "Authentication", "Encryption", "Encryption And Authentication"
+        }, 292, 36, 185, 21, 0);
+        CreateLabel(root, "laOpeFlag", "Operation flag", 483, 39, 73, 13);
+        var cbOpFlag = CreateDropdown(root, "cbOpFlag", new[] {
+            "None", "Force Read From Device", "Force Read From Cache"
+        }, 558, 38, 149, 21, 0);
 
-        // ============================================================
-        //  Services table (UUID | Is short UUID | Handle)
-        // ============================================================
-        var svWidths = new[] { 600f, 200f, 200f };
-        var svHeaders = new[] { "UUID", "Is short UUID", "Handle" };
-        var (svScroll, svContent) = MakeTable("ServicesScroll", canvasGO.transform,
-            new Vector2(20, -370), 140, svWidths, svHeaders);
+        // lvDevices
+        var lvDevicesContent = CreateListView(root, "lvDevices", 12, 63, 697, 75,
+            new[] { "Address", "Name", "Device type", "Paired" },
+            new float[] { 150, 150, 150, 80 });
 
-        // ============================================================
-        //  Row 4: GetCharacteristics | GetCharValue | EdCharValue | SetValue | WriteKind
-        // ============================================================
-        var r4 = MakeHBar("Row4", canvasGO.transform, 540, 40);
-        var btGetChars     = MakeButton("BtGetCharacteristics", "Get characteristics", r4.transform, 200, 40);
-        var btGetCharVal   = MakeButton("BtGetCharValue", "Get value", r4.transform, 140, 40);
-        MakeLabel("Char value (hex)", r4.transform, 200, 40);
-        var edCharVal      = MakeInputField("EdCharValue", r4.transform, 220, 40, "00FFAA00");
-        var btSetValue     = MakeButton("BtSetValue", "Set value", r4.transform, 140, 40);
-        MakeLabel("Write kind", r4.transform, 130, 40);
-        var ddWriteKind    = MakeDropdown("DdWriteKind", r4.transform, 220, 40, WriteOptions);
+        // Row 4 (y=139..162)
+        var btConnect          = CreateButton(root, "btConnect", "Connect", 10, 144, 57, 23);
+        var btDisconnect       = CreateButton(root, "btDisconnect", "Disconnect", 73, 144, 71, 23);
+        var cbForceIndications = CreateCheckBox(root, "cbForceIndications", "Force indications", 148, 139, 106, 17, false);
+        var cbConnectOnRead    = CreateCheckBox(root, "cbConnectOnRead", "Connect on read", 149, 156, 105, 17, false);
+        var btGetParams        = CreateButton(root, "btGetParams", "Get params", 255, 144, 72, 23);
+        var cbParams           = CreateDropdown(root, "cbParams", new[] {
+            "Balanced", "PowerOptimized", "ThroughputOptimized", "Custom"
+        }, 332, 144, 102, 21, 0);
+        var btSetParams        = CreateButton(root, "btSetParams", "Set params", 439, 144, 68, 23);
+        var btGetServices      = CreateButton(root, "btGetServices", "Get services", 512, 144, 74, 23);
+        var btGetIncludedServices = CreateButton(root, "btGetIncludedServices", "Get included services", 592, 144, 117, 23);
 
-        // ============================================================
-        //  Characteristics table (13 cols)
-        // ============================================================
-        var chWidths = new[] { 220f, 100f, 120f, 100f, 120f, 120f, 110f, 110f, 160f, 140f, 110f, 110f, 200f };
-        var chHeaders = new[] { "UUID", "Is short UUID", "Service handle", "Handle", "Value handle",
-                                 "Is broadcastable", "Is readable", "Is writable", "Is writable w/o resp",
-                                 "Is signed writable", "Is notifiable", "Is indicatable", "Has extended props" };
-        var (chScroll, chContent) = MakeTable("CharacteristicsScroll", canvasGO.transform,
-            new Vector2(20, -610), 160, chWidths, chHeaders);
+        // lvServices
+        var lvServicesContent = CreateListView(root, "lvServices", 12, 173, 697, 78,
+            new[] { "UUID", "Is short UUID", "Handle" },
+            new float[] { 200, 80, 100 });
 
-        // ============================================================
-        //  Row 5: Subscribe panel
-        // ============================================================
-        var r5 = MakeHBar("Row5", canvasGO.transform, 800, 40);
-        var btGetDesc      = MakeButton("BtGetDescriptors", "Get descriptors", r5.transform, 180, 40);
-        var btGetDescVal   = MakeButton("BtGetDescValue", "Get desc value", r5.transform, 180, 40);
-        var tgFastSub      = MakeToggle("TgFastSubscribe", "Fast subscribe", r5.transform, 220, 40);
-        MakeLabel("Subscribe kind", r5.transform, 150, 40);
-        var ddSubscribeKind= MakeDropdown("DdSubscribeKind", r5.transform, 200, 40, SubscribeOptions);
-        var btSubscribe    = MakeButton("BtSubscribe", "Subscribe", r5.transform, 140, 40);
-        var btUnsubscribe  = MakeButton("BtUnsubscribe", "Unsubscribe", r5.transform, 160, 40);
-        var btWriteSub     = MakeButton("BtWriteSubscribe", "Write CCCD sub", r5.transform, 200, 40);
-        var btWriteUnsub   = MakeButton("BtWriteUnsubscribe", "Write CCCD unsub", r5.transform, 220, 40);
-        var btGetMaxPdu    = MakeButton("BtGetMaxPdu", "Max PDU size", r5.transform, 160, 40);
-        var btGetPhy       = MakeButton("BtGetPhy", "Get PHY", r5.transform, 150, 40);
+        // Row 6 (y=257..280)
+        var btGetCharacteristics = CreateButton(root, "btGetCharacteristics", "Get characteristics", 12, 257, 108, 23);
+        var btGetCharValue       = CreateButton(root, "btGetCharValue", "Get value", 125, 257, 61, 23);
+        CreateLabel(root, "laCharValue", "Characteristic value (hex)", 192, 262, 126, 13);
+        var edCharVal            = CreateInputField(root, "edCharVal", "00FFAA00", 324, 259, 132, 20);
+        var btSetValue           = CreateButton(root, "btSetValue", "Set value", 462, 257, 66, 23);
+        CreateLabel(root, "laWriteKind", "Write kind:", 534, 264, 58, 13);
+        var cbWriteKind          = CreateDropdown(root, "cbWriteKind", new[] {
+            "With Response", "Without Response", "Auto Split", "Auto"
+        }, 593, 259, 116, 21, 3);
 
-        // ============================================================
-        //  Descriptors table (6 cols)
-        // ============================================================
-        var dcWidths = new[] { 400f, 130f, 150f, 200f, 120f, 400f };
-        var dcHeaders = new[] { "UUID", "Is short UUID", "Service handle", "Characteristic handle", "Handle", "Type" };
-        var (dcScroll, dcContent) = MakeTable("DescriptorsScroll", canvasGO.transform,
-            new Vector2(20, -870), 130, dcWidths, dcHeaders);
+        // lvCharacteristics
+        var lvCharacteristicsContent = CreateListView(root, "lvCharacteristics", 12, 286, 697, 73,
+            new[] { "UUID", "Is short UUID", "Service handle", "Handle", "Value handle",
+                    "Is broadcastable", "Is readable", "Is writable", "Is writable without response",
+                    "Is signed writable", "Is notifiable", "Is indicatable", "Has extended properties" },
+            new float[] { 200, 80, 90, 100, 100, 80, 80, 80, 80, 80, 80, 80, 80 });
 
-        // ============================================================
-        //  Descriptor value table (Property name | Property value)
-        // ============================================================
-        var dvWidths = new[] { 500f, 1200f };
-        var dvHeaders = new[] { "Property name", "Property value" };
-        var (dvScroll, dvContent) = MakeTable("DescriptorValueScroll", canvasGO.transform,
-            new Vector2(20, -1030), 110, dvWidths, dvHeaders);
+        // Row 8 (y=365..387)
+        var btGetDesc      = CreateButton(root, "btGetDesc", "Get descriptors", 12, 365, 88, 23);
+        var cbFastSubscribe = CreateCheckBox(root, "cbFastSubscribe", "Fast subscribe", 106, 369, 94, 17, false);
+        var btSubscribe    = CreateButton(root, "btSubscribe", "Subscribe", 332, 365, 75, 23);
+        var btWriteSubsc   = CreateButton(root, "btWriteSubsc", "Write CCCD subscribe", 413, 365, 138, 23);
+        var btGetMaxPduSize = CreateButton(root, "btGetMaxPduSize", "Max PDU size", 588, 365, 96, 23);
 
-        // ============================================================
-        //  Events table (Address | Event | Param | Value)
-        // ============================================================
-        var evWidths = new[] { 250f, 350f, 350f, 800f };
-        var evHeaders = new[] { "Address", "Event", "Param", "Value" };
-        var (evScroll, evContent) = MakeTable("EventsScroll", canvasGO.transform,
-            new Vector2(20, -1190), 110, evWidths, evHeaders);
+        // Row 9 (y=392..414)
+        var btGetDescVal   = CreateButton(root, "btGetDescVal", "Get value", 12, 394, 88, 23);
+        CreateLabel(root, "laSubscribeKind", "Subscribe kind:", 106, 400, 80, 13);
+        var cbSubscribeKind = CreateDropdown(root, "cbSubscribeKind", new[] {
+            "Notification", "Indication", "Manual"
+        }, 192, 397, 121, 21, 2);
+        var btUnsubscribe  = CreateButton(root, "btUnsubscribe", "Unsubscribe", 332, 392, 75, 23);
+        var btWriteUnsubsc = CreateButton(root, "btWriteUnsubsc", "Write CCCD unsubscribe", 413, 392, 138, 23);
+        var btPhy          = CreateButton(root, "btPhy", "Get PHY", 588, 392, 96, 23);
 
-        var clearEvents = MakeButton("BtClearEvents", "Clear", canvasGO.transform, 120, 40);
-        var ceRect = clearEvents.GetComponent<RectTransform>();
-        ceRect.anchorMin = new Vector2(1, 0); ceRect.anchorMax = new Vector2(1, 0);
-        ceRect.pivot = new Vector2(1, 0);
-        ceRect.anchoredPosition = new Vector2(-20, 20);
+        // lvDescriptors
+        var lvDescriptorsContent = CreateListView(root, "lvDescriptors", 10, 424, 697, 73,
+            new[] { "UUID", "Is short UUID", "Service handle", "Characteristic handle", "Handle", "Type" },
+            new float[] { 200, 80, 80, 80, 100, 100 });
 
-        // ============================================================
-        //  Prefabs
-        // ============================================================
-        var devRow = MakeTableRowPrefab("GattDeviceRow", devWidths);
-        var svRow  = MakeTableRowPrefab("GattServiceRow", svWidths);
-        var chRow  = MakeTableRowPrefab("GattCharacteristicRow", chWidths);
-        var dcRow  = MakeTableRowPrefab("GattDescriptorRow", dcWidths);
-        var dvRow  = MakeTableRowPrefab("GattDescriptorValueRow", dvWidths);
-        var evRow  = MakeTableRowPrefab("GattEventRow", evWidths);
+        // lvDescriptorValue
+        var lvDescriptorValueContent = CreateListView(root, "lvDescriptorValue", 10, 503, 697, 65,
+            new[] { "Property name", "Property value" },
+            new float[] { 200, 200 });
 
-        // ============================================================
-        //  Main GameObject + links
-        // ============================================================
-        var demoGO = new GameObject("GattClientDemo");
-        var demo = demoGO.AddComponent<GattClientDemo>();
+        // lvEvents
+        var lvEventsContent = CreateListView(root, "lvEvents", 10, 574, 699, 76,
+            new[] { "Address", "Event", "Param", "Value" },
+            new float[] { 100, 150, 150, 150 });
 
-        demo.discoverButton     = btDiscover;
-        demo.terminateButton    = btTerminate;
-        demo.pairButton         = btPair;
-        demo.unpairButton       = btUnpair;
-        demo.enumPairedButton   = btEnumPaired;
-        demo.mitmDropdown       = ddMitm;
-        demo.ioCapDropdown      = ddIoCap;
-        demo.protectionDropdown = ddProtection;
-        demo.opFlagDropdown     = ddOpFlag;
+        var btClear = CreateButton(root, "btClear", "Clear", 634, 656, 75, 23);
 
-        demo.devicesContent  = devContent;
-        demo.deviceRowPrefab = devRow;
+        // Controller
+        var ctrlGO = new GameObject("GattClientController");
+        var ctrl = ctrlGO.AddComponent<GattClientController>();
 
-        demo.connectButton           = btConnect;
-        demo.disconnectButton        = btDisconnect;
-        demo.connectOnReadToggle     = tgConnectOnRead;
-        demo.forceIndicationsToggle  = tgForceInd;
-        demo.getServicesButton       = btGetServices;
-        demo.getIncludedServicesButton = btGetInc;
+        ctrl.btDiscover              = btDiscover.GetComponent<Button>();
+        ctrl.btTerminate             = btTerminate.GetComponent<Button>();
+        ctrl.btEnumPaired            = btEnumPaired.GetComponent<Button>();
+        ctrl.btPair                  = btPair.GetComponent<Button>();
+        ctrl.btUnpair                = btUnpair.GetComponent<Button>();
+        ctrl.btConnect               = btConnect.GetComponent<Button>();
+        ctrl.btDisconnect            = btDisconnect.GetComponent<Button>();
+        ctrl.btGetParams             = btGetParams.GetComponent<Button>();
+        ctrl.btSetParams             = btSetParams.GetComponent<Button>();
+        ctrl.btGetServices           = btGetServices.GetComponent<Button>();
+        ctrl.btGetIncludedServices   = btGetIncludedServices.GetComponent<Button>();
+        ctrl.btGetCharacteristics    = btGetCharacteristics.GetComponent<Button>();
+        ctrl.btGetCharValue          = btGetCharValue.GetComponent<Button>();
+        ctrl.btSetValue              = btSetValue.GetComponent<Button>();
+        ctrl.btGetDesc               = btGetDesc.GetComponent<Button>();
+        ctrl.btGetDescVal            = btGetDescVal.GetComponent<Button>();
+        ctrl.btSubscribe             = btSubscribe.GetComponent<Button>();
+        ctrl.btUnsubscribe           = btUnsubscribe.GetComponent<Button>();
+        ctrl.btWriteSubsc            = btWriteSubsc.GetComponent<Button>();
+        ctrl.btWriteUnsubsc          = btWriteUnsubsc.GetComponent<Button>();
+        ctrl.btGetMaxPduSize         = btGetMaxPduSize.GetComponent<Button>();
+        ctrl.btPhy                   = btPhy.GetComponent<Button>();
+        ctrl.btClear                 = btClear.GetComponent<Button>();
 
-        demo.getParamsButton = btGetParams;
-        demo.paramsDropdown  = ddParams;
-        demo.setParamsButton = btSetParams;
+        ctrl.cbMitmProtection = cbMitmProtection;
+        ctrl.cbIoCap          = cbIoCap;
+        ctrl.cbProtection     = cbProtection;
+        ctrl.cbOpFlag         = cbOpFlag;
+        ctrl.cbParams         = cbParams;
+        ctrl.cbWriteKind      = cbWriteKind;
+        ctrl.cbSubscribeKind  = cbSubscribeKind;
 
-        demo.servicesContent  = svContent;
-        demo.serviceRowPrefab = svRow;
+        ctrl.cbForceIndications = cbForceIndications;
+        ctrl.cbConnectOnRead    = cbConnectOnRead;
+        ctrl.cbFastSubscribe    = cbFastSubscribe;
 
-        demo.characteristicsContent   = chContent;
-        demo.characteristicRowPrefab  = chRow;
-        demo.getCharacteristicsButton = btGetChars;
-        demo.getCharValueButton       = btGetCharVal;
-        demo.charValueInput           = edCharVal;
-        demo.setValueButton           = btSetValue;
-        demo.writeKindDropdown        = ddWriteKind;
+        ctrl.edCharVal = edCharVal;
 
-        demo.descriptorsContent   = dcContent;
-        demo.descriptorRowPrefab  = dcRow;
-        demo.getDescriptorsButton = btGetDesc;
-        demo.getDescValueButton   = btGetDescVal;
+        ctrl.lvDevicesContent         = lvDevicesContent;
+        ctrl.lvServicesContent        = lvServicesContent;
+        ctrl.lvCharacteristicsContent = lvCharacteristicsContent;
+        ctrl.lvDescriptorsContent     = lvDescriptorsContent;
+        ctrl.lvDescriptorValueContent = lvDescriptorValueContent;
+        ctrl.lvEventsContent          = lvEventsContent;
 
-        demo.descriptorValueContent  = dvContent;
-        demo.descriptorValueRowPrefab = dvRow;
-
-        demo.fastSubscribeToggle      = tgFastSub;
-        demo.subscribeKindDropdown    = ddSubscribeKind;
-        demo.subscribeButton          = btSubscribe;
-        demo.unsubscribeButton        = btUnsubscribe;
-        demo.writeSubscribeButton     = btWriteSub;
-        demo.writeUnsubscribeButton   = btWriteUnsub;
-
-        demo.getMaxPduSizeButton = btGetMaxPdu;
-        demo.getPhyButton        = btGetPhy;
-
-        demo.eventsContent     = evContent;
-        demo.eventRowPrefab    = evRow;
-        demo.clearEventsButton = clearEvents;
-
-        Selection.activeGameObject = demoGO;
-        EditorGUIUtility.PingObject(demoGO);
-
-        Debug.Log("GATT Client Demo UI built. Press Play.");
-    }
-
-    // ================================================================
-    //  Table
-    // ================================================================
-    private static (GameObject scroll, Transform content) MakeTable(
-        string name, Transform parent, Vector2 anchoredPos, float height,
-        float[] widths, string[] headers)
-    {
-        var header = CreateUI(name + "_Header", parent);
-        var hr = header.GetComponent<RectTransform>();
-        hr.anchorMin = new Vector2(0, 1); hr.anchorMax = new Vector2(1, 1);
-        hr.pivot = new Vector2(0.5f, 1);
-        hr.anchoredPosition = new Vector2(0, anchoredPos.y + 26);
-        hr.sizeDelta = new Vector2(-40, 24);
-
-        var hHlg = header.AddComponent<HorizontalLayoutGroup>();
-        hHlg.spacing = 4;
-        hHlg.childForceExpandWidth = false; hHlg.childForceExpandHeight = true;
-        hHlg.childControlWidth = true; hHlg.childControlHeight = true;
-
-        for (int i = 0; i < headers.Length; i++)
+        Directory.CreateDirectory("Assets/Scenes");
+        EditorSceneManager.MarkSceneDirty(scene);
+        bool saved = EditorSceneManager.SaveScene(scene, ScenePath);
+        if (!saved)
         {
-            var t = CreateText("H_" + headers[i], headers[i], header.transform);
-            t.fontStyle = FontStyles.Bold;
-            t.fontSize = 15;
-            t.alignment = TextAlignmentOptions.MidlineLeft;
-            var le = t.gameObject.AddComponent<LayoutElement>();
-            le.preferredWidth = widths[i]; le.minWidth = widths[i];
+            Debug.LogError("[GattClient] Failed to save scene: " + ScenePath);
+            return;
         }
 
-        var scroll = MakeScrollView(name, parent);
-        var sr = scroll.GetComponent<RectTransform>();
-        sr.anchorMin = new Vector2(0, 1); sr.anchorMax = new Vector2(1, 1);
-        sr.pivot = new Vector2(0.5f, 1);
-        sr.anchoredPosition = anchoredPos;
-        sr.sizeDelta = new Vector2(-40, height);
-
-        var content = scroll.transform.Find("Viewport/Content");
-        var vlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 2;
-        vlg.padding = new RectOffset(4, 4, 4, 4);
-        vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
-        vlg.childControlWidth = true; vlg.childControlHeight = true;
-        var csf = content.gameObject.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        return (scroll, content);
-    }
-
-    private static GameObject MakeTableRowPrefab(string name, float[] widths)
-    {
-        if (!Directory.Exists(PrefabsFolder)) Directory.CreateDirectory(PrefabsFolder);
-
-        var root = CreateUI(name, null);
-        var rt = root.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, 26);
-
-        var img = root.AddComponent<Image>();
-        img.color = new Color(1, 1, 1, 0.03f);
-        root.AddComponent<Button>();
-
-        var le = root.AddComponent<LayoutElement>();
-        le.minHeight = 26; le.preferredHeight = 26;
-
-        var hlg = root.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 4;
-        hlg.padding = new RectOffset(4, 4, 2, 2);
-        hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = true;
-        hlg.childControlWidth = true; hlg.childControlHeight = true;
-
-        var cells = new TMP_Text[widths.Length];
-        for (int i = 0; i < widths.Length; i++)
-        {
-            var t = CreateText("Cell" + i, "", root.transform);
-            t.fontSize = 14;
-            t.enableWordWrapping = false;
-            t.overflowMode = TextOverflowModes.Ellipsis;
-            t.alignment = TextAlignmentOptions.MidlineLeft;
-            var l = t.gameObject.AddComponent<LayoutElement>();
-            l.preferredWidth = widths[i]; l.minWidth = widths[i];
-            cells[i] = t;
-        }
-
-        var ui = root.AddComponent<TableRowUI>();
-        ui.cells = cells;
-        ui.background = img;
-
-        var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/" + name + ".prefab");
-        Object.DestroyImmediate(root);
+        AddSceneToBuildSettings(ScenePath);
+        AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        return prefab;
+
+        var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
+        Selection.activeObject = sceneAsset;
+        EditorGUIUtility.PingObject(sceneAsset);
+
+        Debug.Log("[GattClient] Scene created and saved: " + ScenePath);
     }
 
-    // ================================================================
-    //  UI helpers
-    // ================================================================
-    private static GameObject MakeHBar(string name, Transform parent, float y, float h)
+    private static void AddSceneToBuildSettings(string scenePath)
     {
-        var bar = CreateUI(name, parent);
-        var rt = bar.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(1, 1);
-        rt.pivot = new Vector2(0.5f, 1);
-        rt.anchoredPosition = new Vector2(0, -y);
-        rt.sizeDelta = new Vector2(-40, h);
-
-        var hlg = bar.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 8;
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = true;
-        hlg.childControlWidth = true; hlg.childControlHeight = true;
-        return bar;
+        var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        foreach (var s in scenes)
+            if (s.path == scenePath) return;
+        scenes.Add(new EditorBuildSettingsScene(scenePath, true));
+        EditorBuildSettings.scenes = scenes.ToArray();
     }
 
-    private static Button MakeButton(string name, string label, Transform parent, float w, float h)
-    {
-        var go = CreateUI(name, parent);
-        var img = go.AddComponent<Image>();
-        img.color = new Color(0.22f, 0.22f, 0.22f);
+    // ==========================================================
+    //  Primitives
+    // ==========================================================
 
-        var btn = go.AddComponent<Button>();
+    private static GameObject CreatePanel(Transform parent, string name, float x, float y, float w, float h, Color color)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = color;
+        return go;
+    }
+
+    private static GameObject CreateLabel(Transform parent, string name, string text, float x, float y, float w, float h)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        var tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = 11;
+        tmp.alignment = TextAlignmentOptions.TopLeft;
+        tmp.color = Color.black;
+        tmp.raycastTarget = false;
+        return go;
+    }
+
+    private static GameObject CreateButton(Transform parent, string name, string label, float x, float y, float w, float h)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = new Color(0.87f, 0.87f, 0.87f);
+
+        var btn = go.GetComponent<Button>();
         var c = btn.colors;
-        c.highlightedColor = new Color(0.35f, 0.35f, 0.35f);
-        c.pressedColor     = new Color(0.15f, 0.15f, 0.15f);
+        c.normalColor      = Color.white;
+        c.highlightedColor = new Color(0.93f, 0.93f, 0.93f);
+        c.pressedColor     = new Color(0.75f, 0.75f, 0.75f);
         btn.colors = c;
 
-        var le = go.AddComponent<LayoutElement>();
-        le.preferredWidth = w; le.minWidth = w;
-        le.preferredHeight = h; le.minHeight = h;
+        var txtGO = new GameObject("Text", typeof(RectTransform));
+        txtGO.transform.SetParent(go.transform, false);
+        var txtRT = txtGO.GetComponent<RectTransform>();
+        txtRT.anchorMin = Vector2.zero;
+        txtRT.anchorMax = Vector2.one;
+        txtRT.offsetMin = Vector2.zero;
+        txtRT.offsetMax = Vector2.zero;
+        var tmp = txtGO.AddComponent<TextMeshProUGUI>();
+        tmp.text = label;
+        tmp.fontSize = 11;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.black;
+        tmp.raycastTarget = false;
 
-        var tGO = CreateUI("Text", go.transform);
-        var t = tGO.AddComponent<TextMeshProUGUI>();
-        t.text = label; t.color = Color.white; t.fontSize = 16;
-        t.alignment = TextAlignmentOptions.Center;
-        var trt = t.rectTransform;
-        trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-        trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
-        return btn;
+        return go;
     }
 
-    private static Toggle MakeToggle(string name, string label, Transform parent, float w, float h)
+    private static TMP_InputField CreateInputField(Transform parent, string name, string text,
+        float x, float y, float w, float h)
     {
-        var go = CreateUI(name, parent);
-        var le = go.AddComponent<LayoutElement>();
-        le.preferredWidth = w; le.minWidth = w;
-        le.preferredHeight = h; le.minHeight = h;
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(TMP_InputField));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = Color.white;
 
-        var toggle = go.AddComponent<Toggle>();
+        var textAreaGO = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
+        var textAreaRT = textAreaGO.GetComponent<RectTransform>();
+        textAreaRT.SetParent(go.transform, false);
+        textAreaRT.anchorMin = Vector2.zero;
+        textAreaRT.anchorMax = Vector2.one;
+        textAreaRT.offsetMin = new Vector2(4, 2);
+        textAreaRT.offsetMax = new Vector2(-4, -2);
 
-        var bg = CreateUI("Background", go.transform);
-        var bgRect = bg.GetComponent<RectTransform>();
-        bgRect.anchorMin = new Vector2(0, 0.5f); bgRect.anchorMax = new Vector2(0, 0.5f);
-        bgRect.pivot = new Vector2(0, 0.5f);
-        bgRect.anchoredPosition = new Vector2(4, 0);
-        bgRect.sizeDelta = new Vector2(20, 20);
-        var bgImg = bg.AddComponent<Image>();
-        bgImg.color = new Color(0.2f, 0.2f, 0.2f);
+        var placeholderGO = new GameObject("Placeholder", typeof(RectTransform));
+        var placeholderRT = placeholderGO.GetComponent<RectTransform>();
+        placeholderRT.SetParent(textAreaGO.transform, false);
+        placeholderRT.anchorMin = Vector2.zero;
+        placeholderRT.anchorMax = Vector2.one;
+        placeholderRT.offsetMin = Vector2.zero;
+        placeholderRT.offsetMax = Vector2.zero;
+        var placeholderTmp = placeholderGO.AddComponent<TextMeshProUGUI>();
+        placeholderTmp.text = string.Empty;
+        placeholderTmp.fontSize = 11;
+        placeholderTmp.color = new Color(0.5f, 0.5f, 0.5f);
+        placeholderTmp.alignment = TextAlignmentOptions.Left;
+        placeholderTmp.enableWordWrapping = false;
+        placeholderTmp.raycastTarget = false;
 
-        var cm = CreateUI("Checkmark", bg.transform);
-        var cmRect = cm.GetComponent<RectTransform>();
-        cmRect.anchorMin = new Vector2(0.5f, 0.5f); cmRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cmRect.pivot = new Vector2(0.5f, 0.5f); cmRect.anchoredPosition = Vector2.zero;
-        cmRect.sizeDelta = new Vector2(12, 12);
-        var cmImg = cm.AddComponent<Image>();
-        cmImg.color = new Color(0.4f, 0.7f, 1f);
+        var textGO = new GameObject("Text", typeof(RectTransform));
+        var textRT = textGO.GetComponent<RectTransform>();
+        textRT.SetParent(textAreaGO.transform, false);
+        textRT.anchorMin = Vector2.zero;
+        textRT.anchorMax = Vector2.one;
+        textRT.offsetMin = Vector2.zero;
+        textRT.offsetMax = Vector2.zero;
+        var textTmp = textGO.AddComponent<TextMeshProUGUI>();
+        textTmp.text = text;
+        textTmp.fontSize = 11;
+        textTmp.color = Color.black;
+        textTmp.alignment = TextAlignmentOptions.Left;
+        textTmp.enableWordWrapping = false;
 
-        var lbl = CreateText("Label", label, go.transform);
-        lbl.fontSize = 16;
-        var lRect = lbl.rectTransform;
-        lRect.anchorMin = new Vector2(0, 0); lRect.anchorMax = new Vector2(1, 1);
-        lRect.offsetMin = new Vector2(30, 0); lRect.offsetMax = Vector2.zero;
+        var inputField = go.GetComponent<TMP_InputField>();
+        inputField.targetGraphic = go.GetComponent<Image>();
+        inputField.textViewport  = textAreaRT;
+        inputField.textComponent = textTmp;
+        inputField.placeholder   = placeholderTmp;
+        inputField.lineType      = TMP_InputField.LineType.SingleLine;
+        inputField.text          = text;
 
-        toggle.targetGraphic = bgImg;
-        toggle.graphic = cmImg;
+        return inputField;
+    }
+
+    private static Toggle CreateCheckBox(Transform parent, string name, string label,
+        float x, float y, float w, float h, bool isOn)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Toggle));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+
+        var boxGO = new GameObject("Box", typeof(RectTransform), typeof(Image));
+        var boxRT = boxGO.GetComponent<RectTransform>();
+        boxRT.SetParent(go.transform, false);
+        boxRT.anchorMin = new Vector2(0, 0.5f);
+        boxRT.anchorMax = new Vector2(0, 0.5f);
+        boxRT.pivot     = new Vector2(0, 0.5f);
+        boxRT.anchoredPosition = Vector2.zero;
+        boxRT.sizeDelta = new Vector2(13, 13);
+        var boxImg = boxGO.GetComponent<Image>();
+        boxImg.color = Color.white;
+
+        var checkGO = new GameObject("Check", typeof(RectTransform), typeof(Image));
+        var checkRT = checkGO.GetComponent<RectTransform>();
+        checkRT.SetParent(boxGO.transform, false);
+        checkRT.anchorMin = Vector2.zero;
+        checkRT.anchorMax = Vector2.one;
+        checkRT.offsetMin = new Vector2(2, 2);
+        checkRT.offsetMax = new Vector2(-2, -2);
+        var checkImg = checkGO.GetComponent<Image>();
+        checkImg.color = new Color(0.2f, 0.2f, 0.2f);
+        checkImg.raycastTarget = false;
+
+        var labelGO = new GameObject("Label", typeof(RectTransform));
+        var labelRT = labelGO.GetComponent<RectTransform>();
+        labelRT.SetParent(go.transform, false);
+        labelRT.anchorMin = Vector2.zero;
+        labelRT.anchorMax = Vector2.one;
+        labelRT.offsetMin = new Vector2(17, 0);
+        labelRT.offsetMax = Vector2.zero;
+        var labelTmp = labelGO.AddComponent<TextMeshProUGUI>();
+        labelTmp.text = label;
+        labelTmp.fontSize = 11;
+        labelTmp.color = Color.black;
+        labelTmp.alignment = TextAlignmentOptions.Left;
+        labelTmp.enableWordWrapping = false;
+        labelTmp.raycastTarget = false;
+
+        var toggle = go.GetComponent<Toggle>();
+        toggle.targetGraphic = boxImg;
+        toggle.graphic = checkImg;
+        toggle.isOn = isOn;
+
         return toggle;
     }
 
-    private static TMP_Text MakeLabel(string text, Transform parent, float w, float h)
+    private static TMP_Dropdown CreateDropdown(Transform parent, string name, string[] options,
+        float x, float y, float w, float h, int selectedIndex)
     {
-        var t = CreateText(text, text, parent);
-        t.fontSize = 16;
-        t.alignment = TextAlignmentOptions.MidlineLeft;
-        var le = t.gameObject.AddComponent<LayoutElement>();
-        le.preferredWidth = w; le.minWidth = w;
-        le.preferredHeight = h; le.minHeight = h;
-        return t;
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(TMP_Dropdown));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = Color.white;
+
+        var labelGO = new GameObject("Label", typeof(RectTransform));
+        labelGO.transform.SetParent(go.transform, false);
+        var labelRT = labelGO.GetComponent<RectTransform>();
+        labelRT.anchorMin = Vector2.zero;
+        labelRT.anchorMax = Vector2.one;
+        labelRT.offsetMin = new Vector2(4, 0);
+        labelRT.offsetMax = new Vector2(-18, 0);
+        var labelTmp = labelGO.AddComponent<TextMeshProUGUI>();
+        labelTmp.fontSize = 11;
+        labelTmp.alignment = TextAlignmentOptions.Left;
+        labelTmp.color = Color.black;
+        labelTmp.raycastTarget = false;
+
+        var arrowGO = new GameObject("Arrow", typeof(RectTransform), typeof(Image));
+        arrowGO.transform.SetParent(go.transform, false);
+        var arrowRT = arrowGO.GetComponent<RectTransform>();
+        arrowRT.anchorMin = new Vector2(1, 0.5f);
+        arrowRT.anchorMax = new Vector2(1, 0.5f);
+        arrowRT.pivot     = new Vector2(1, 0.5f);
+        arrowRT.anchoredPosition = new Vector2(-4, 0);
+        arrowRT.sizeDelta = new Vector2(10, 10);
+        arrowGO.GetComponent<Image>().color = new Color(0.35f, 0.35f, 0.35f);
+
+        var templateGO = new GameObject("Template",
+            typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(Canvas), typeof(GraphicRaycaster));
+        var templateRT = templateGO.GetComponent<RectTransform>();
+        templateRT.SetParent(go.transform, false);
+        templateRT.anchorMin = new Vector2(0, 0);
+        templateRT.anchorMax = new Vector2(1, 0);
+        templateRT.pivot     = new Vector2(0.5f, 1);
+        templateRT.anchoredPosition = new Vector2(0, 2);
+        templateRT.sizeDelta = new Vector2(0, options.Length * 20f + 2f);
+        templateGO.GetComponent<Image>().color = Color.white;
+        var templateCanvas = templateGO.GetComponent<Canvas>();
+        templateCanvas.overrideSorting = true;
+        templateCanvas.sortingOrder = 30000;
+        templateGO.SetActive(false);
+
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+        viewportGO.transform.SetParent(templateGO.transform, false);
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        viewportRT.anchorMin = Vector2.zero;
+        viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = Vector2.zero;
+        viewportRT.offsetMax = Vector2.zero;
+        viewportGO.GetComponent<Image>().color = new Color(1, 1, 1, 0.01f);
+        viewportGO.GetComponent<Mask>().showMaskGraphic = false;
+
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        contentGO.transform.SetParent(viewportGO.transform, false);
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.anchorMin = new Vector2(0, 1);
+        contentRT.anchorMax = new Vector2(1, 1);
+        contentRT.pivot     = new Vector2(0.5f, 1);
+        contentRT.anchoredPosition = Vector2.zero;
+        contentRT.sizeDelta = Vector2.zero;
+        var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        var csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var itemGO = new GameObject("Item", typeof(RectTransform), typeof(Toggle), typeof(Image));
+        itemGO.transform.SetParent(contentGO.transform, false);
+        var itemRT = itemGO.GetComponent<RectTransform>();
+        itemRT.anchorMin = new Vector2(0, 1);
+        itemRT.anchorMax = new Vector2(1, 1);
+        itemRT.pivot     = new Vector2(0.5f, 1);
+        itemRT.anchoredPosition = Vector2.zero;
+        itemRT.sizeDelta = new Vector2(0, 20);
+        var itemImg = itemGO.GetComponent<Image>();
+        itemImg.color = Color.white;
+        var itemToggle = itemGO.GetComponent<Toggle>();
+        itemToggle.targetGraphic = itemImg;
+        var itemLe = itemGO.AddComponent<LayoutElement>();
+        itemLe.preferredHeight = 20;
+
+        var itemBgGO = new GameObject("Item Background", typeof(RectTransform), typeof(Image));
+        itemBgGO.transform.SetParent(itemGO.transform, false);
+        var itemBgRT = itemBgGO.GetComponent<RectTransform>();
+        itemBgRT.anchorMin = Vector2.zero;
+        itemBgRT.anchorMax = Vector2.one;
+        itemBgRT.offsetMin = Vector2.zero;
+        itemBgRT.offsetMax = Vector2.zero;
+        itemBgGO.GetComponent<Image>().color = Color.white;
+
+        var itemLabelGO = new GameObject("Item Label", typeof(RectTransform));
+        itemLabelGO.transform.SetParent(itemGO.transform, false);
+        var itemLabelRT = itemLabelGO.GetComponent<RectTransform>();
+        itemLabelRT.anchorMin = Vector2.zero;
+        itemLabelRT.anchorMax = Vector2.one;
+        itemLabelRT.offsetMin = new Vector2(6, 0);
+        itemLabelRT.offsetMax = new Vector2(-6, 0);
+        var itemLabelTmp = itemLabelGO.AddComponent<TextMeshProUGUI>();
+        itemLabelTmp.fontSize = 11;
+        itemLabelTmp.alignment = TextAlignmentOptions.Left;
+        itemLabelTmp.color = Color.black;
+
+        var sr = templateGO.GetComponent<ScrollRect>();
+        sr.content = contentRT;
+        sr.viewport = viewportRT;
+        sr.horizontal = false;
+        sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
+
+        var dropdown = go.GetComponent<TMP_Dropdown>();
+        dropdown.targetGraphic = go.GetComponent<Image>();
+        dropdown.template = templateRT;
+        dropdown.captionText = labelTmp;
+        dropdown.itemText = itemLabelTmp;
+        dropdown.itemImage = itemBgGO.GetComponent<Image>();
+
+        dropdown.options.Clear();
+        foreach (var opt in options)
+            dropdown.options.Add(new TMP_Dropdown.OptionData(opt));
+        dropdown.value = selectedIndex;
+        dropdown.RefreshShownValue();
+
+        return dropdown;
     }
 
-    private static TextMeshProUGUI CreateText(string name, string content, Transform parent)
+    // ==========================================================
+    //  ListView: returns Content RectTransform
+    // ==========================================================
+    private static RectTransform CreateListView(Transform parent, string name,
+        float x, float y, float w, float h, string[] headers, float[] widths)
     {
-        var go = CreateUI(name, parent);
-        var text = go.AddComponent<TextMeshProUGUI>();
-        text.text = content;
-        text.color = Color.white;
-        text.fontSize = 16;
-        text.alignment = TextAlignmentOptions.TopLeft;
-        return text;
-    }
+        const float RowH = 18f;
 
-    private static TMP_InputField MakeInputField(string name, Transform parent, float w, float h, string defaultText)
-    {
-        var go = CreateUI(name, parent);
-        var le = go.AddComponent<LayoutElement>();
-        le.preferredWidth = w; le.minWidth = w;
-        le.preferredHeight = h; le.minHeight = h;
+        var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+        var rt = root.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        root.GetComponent<Image>().color = Color.white;
 
-        var bg = go.AddComponent<Image>();
-        bg.color = new Color(0.15f, 0.15f, 0.15f);
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        viewportRT.SetParent(root.transform, false);
+        viewportRT.anchorMin = Vector2.zero;
+        viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = new Vector2(1, 1);
+        viewportRT.offsetMax = new Vector2(-1, -1);
+        viewportGO.GetComponent<Image>().color = new Color(1, 1, 1, 0.01f);
+        viewportGO.GetComponent<Mask>().showMaskGraphic = false;
 
-        var ta = CreateUI("Text Area", go.transform);
-        var taRect = ta.GetComponent<RectTransform>();
-        taRect.anchorMin = Vector2.zero; taRect.anchorMax = Vector2.one;
-        taRect.offsetMin = new Vector2(6, 4); taRect.offsetMax = new Vector2(-6, -4);
+        float contentW = 0;
+        for (int i = 0; i < widths.Length; i++) contentW += widths[i];
 
-        var txt = ta.AddComponent<TextMeshProUGUI>();
-        txt.color = Color.white; txt.fontSize = 16;
-        txt.alignment = TextAlignmentOptions.MidlineLeft;
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.SetParent(viewportGO.transform, false);
+        contentRT.anchorMin = new Vector2(0, 1);
+        contentRT.anchorMax = new Vector2(0, 1);
+        contentRT.pivot     = new Vector2(0, 1);
+        contentRT.anchoredPosition = Vector2.zero;
+        contentRT.sizeDelta = new Vector2(contentW, 0);
+        var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = false;
+        vlg.childForceExpandHeight = false;
+        vlg.spacing = 0;
+        vlg.padding = new RectOffset(0, 0, 0, 0);
+        var csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
-        var ph = CreateUI("Placeholder", ta.transform);
-        var phRect = ph.GetComponent<RectTransform>();
-        phRect.anchorMin = Vector2.zero; phRect.anchorMax = Vector2.one;
-        phRect.offsetMin = Vector2.zero; phRect.offsetMax = Vector2.zero;
-        var phT = ph.AddComponent<TextMeshProUGUI>();
-        phT.text = defaultText; phT.color = new Color(1, 1, 1, 0.4f); phT.fontSize = 16;
-        phT.alignment = TextAlignmentOptions.MidlineLeft;
+        var headerGO = new GameObject("Header", typeof(RectTransform), typeof(Image),
+            typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+        headerGO.transform.SetParent(contentGO.transform, false);
+        headerGO.GetComponent<Image>().color = new Color(0.88f, 0.88f, 0.88f);
+        var hlg = headerGO.GetComponent<HorizontalLayoutGroup>();
+        hlg.childControlWidth = true;
+        hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = true;
+        hlg.spacing = 0;
+        hlg.padding = new RectOffset(0, 0, 0, 0);
+        var hle = headerGO.GetComponent<LayoutElement>();
+        hle.preferredHeight = RowH;
+        hle.minHeight = RowH;
 
-        var input = go.AddComponent<TMP_InputField>();
-        input.textViewport = taRect;
-        input.textComponent = txt;
-        input.placeholder = phT;
-        input.targetGraphic = bg;
-        input.text = defaultText;
-        return input;
-    }
+        for (int i = 0; i < headers.Length; i++)
+        {
+            var cellGO = new GameObject("h" + i, typeof(RectTransform), typeof(LayoutElement));
+            cellGO.transform.SetParent(headerGO.transform, false);
+            var cellLe = cellGO.GetComponent<LayoutElement>();
+            cellLe.preferredWidth = widths[i];
+            cellLe.minWidth = widths[i];
+            var tmp = cellGO.AddComponent<TextMeshProUGUI>();
+            tmp.text = headers[i];
+            tmp.fontSize = 11;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.alignment = TextAlignmentOptions.Left;
+            tmp.color = Color.black;
+            tmp.enableWordWrapping = false;
+            tmp.overflowMode = TextOverflowModes.Ellipsis;
+            tmp.margin = new Vector4(4, 0, 2, 0);
+            tmp.raycastTarget = false;
+        }
 
-    private static TMP_Dropdown MakeDropdown(string name, Transform parent, float w, float h, string[] opts)
-    {
-        var go = CreateUI(name, parent);
-        var le = go.AddComponent<LayoutElement>();
-        le.preferredWidth = w; le.minWidth = w;
-        le.preferredHeight = h; le.minHeight = h;
+        var sr = root.GetComponent<ScrollRect>();
+        sr.content = contentRT;
+        sr.viewport = viewportRT;
+        sr.horizontal = true;
+        sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
 
-        var bg = go.AddComponent<Image>();
-        bg.color = new Color(0.22f, 0.22f, 0.22f);
-
-        var dd = go.AddComponent<TMP_Dropdown>();
-
-        var labelGO = CreateUI("Label", go.transform);
-        var label = labelGO.AddComponent<TextMeshProUGUI>();
-        label.text = opts.Length > 0 ? opts[0] : "";
-        label.alignment = TextAlignmentOptions.MidlineLeft;
-        label.color = Color.white; label.fontSize = 14;
-        var lRect = label.rectTransform;
-        lRect.anchorMin = Vector2.zero; lRect.anchorMax = Vector2.one;
-        lRect.offsetMin = new Vector2(10, 0); lRect.offsetMax = new Vector2(-25, 0);
-
-        var arrow = CreateUI("Arrow", go.transform);
-        var arrowImg = arrow.AddComponent<Image>();
-        arrowImg.color = new Color(0.7f, 0.7f, 0.7f);
-        var aRect = arrow.GetComponent<RectTransform>();
-        aRect.anchorMin = new Vector2(1, 0.5f); aRect.anchorMax = new Vector2(1, 0.5f);
-        aRect.pivot = new Vector2(1, 0.5f);
-        aRect.anchoredPosition = new Vector2(-8, 0);
-        aRect.sizeDelta = new Vector2(12, 12);
-
-        var template = CreateUI("Template", go.transform);
-        var tRect = template.GetComponent<RectTransform>();
-        tRect.anchorMin = new Vector2(0, 0); tRect.anchorMax = new Vector2(1, 0);
-        tRect.pivot = new Vector2(0.5f, 1);
-        tRect.anchoredPosition = new Vector2(0, 2);
-        tRect.sizeDelta = new Vector2(0, 300);
-
-        var tImg = template.AddComponent<Image>();
-        tImg.color = new Color(0.15f, 0.15f, 0.15f);
-        var tScroll = template.AddComponent<ScrollRect>();
-        tScroll.horizontal = false;
-        var tMask = template.AddComponent<Mask>();
-        tMask.showMaskGraphic = true;
-
-        var viewport = CreateUI("Viewport", template.transform);
-        var vpRect = viewport.GetComponent<RectTransform>();
-        vpRect.anchorMin = Vector2.zero; vpRect.anchorMax = Vector2.one;
-        vpRect.offsetMin = Vector2.zero; vpRect.offsetMax = Vector2.zero;
-        var vpImg = viewport.AddComponent<Image>();
-        vpImg.color = new Color(1, 1, 1, 0.01f);
-        var vpMask = viewport.AddComponent<Mask>();
-        vpMask.showMaskGraphic = false;
-
-        var content = CreateUI("Content", viewport.transform);
-        var cRect = content.GetComponent<RectTransform>();
-        cRect.anchorMin = new Vector2(0, 1); cRect.anchorMax = new Vector2(1, 1);
-        cRect.pivot = new Vector2(0.5f, 1);
-        cRect.anchoredPosition = Vector2.zero;
-        cRect.sizeDelta = new Vector2(0, 28);
-
-        var item = CreateUI("Item", content.transform);
-        var iRect = item.GetComponent<RectTransform>();
-        iRect.anchorMin = new Vector2(0, 0.5f); iRect.anchorMax = new Vector2(1, 0.5f);
-        iRect.pivot = new Vector2(0.5f, 0.5f);
-        iRect.anchoredPosition = Vector2.zero;
-        iRect.sizeDelta = new Vector2(0, 28);
-
-        var itemToggle = item.AddComponent<Toggle>();
-
-        var itemBg = CreateUI("Item Background", item.transform);
-        var ibRect = itemBg.GetComponent<RectTransform>();
-        ibRect.anchorMin = Vector2.zero; ibRect.anchorMax = Vector2.one;
-        ibRect.offsetMin = Vector2.zero; ibRect.offsetMax = Vector2.zero;
-        var ibImg = itemBg.AddComponent<Image>();
-        ibImg.color = new Color(0.2f, 0.2f, 0.2f);
-
-        var itemCheck = CreateUI("Item Checkmark", item.transform);
-        var icRect = itemCheck.GetComponent<RectTransform>();
-        icRect.anchorMin = new Vector2(0, 0.5f); icRect.anchorMax = new Vector2(0, 0.5f);
-        icRect.pivot = new Vector2(0, 0.5f);
-        icRect.anchoredPosition = new Vector2(10, 0);
-        icRect.sizeDelta = new Vector2(14, 14);
-        var icImg = itemCheck.AddComponent<Image>();
-        icImg.color = new Color(0.4f, 0.7f, 1f);
-
-        var itemLabel = CreateUI("Item Label", item.transform);
-        var ilRect = itemLabel.GetComponent<RectTransform>();
-        ilRect.anchorMin = Vector2.zero; ilRect.anchorMax = Vector2.one;
-        ilRect.offsetMin = new Vector2(28, 0); ilRect.offsetMax = new Vector2(-10, 0);
-        var ilText = itemLabel.AddComponent<TextMeshProUGUI>();
-        ilText.text = "Option"; ilText.color = Color.white; ilText.fontSize = 14;
-        ilText.alignment = TextAlignmentOptions.MidlineLeft;
-
-        itemToggle.targetGraphic = ibImg;
-        itemToggle.graphic = icImg;
-
-        tScroll.viewport = vpRect;
-        tScroll.content = cRect;
-
-        dd.template = tRect;
-        dd.captionText = label;
-        dd.itemText = ilText;
-
-        dd.options.Clear();
-        foreach (var o in opts) dd.options.Add(new TMP_Dropdown.OptionData(o));
-        dd.RefreshShownValue();
-
-        template.SetActive(false);
-        return dd;
-    }
-
-    private static GameObject MakeScrollView(string name, Transform parent)
-    {
-        var root = CreateUI(name, parent);
-        var rootImg = root.AddComponent<Image>();
-        rootImg.color = new Color(0.08f, 0.08f, 0.08f, 0.85f);
-        var scroll = root.AddComponent<ScrollRect>();
-        scroll.horizontal = true;
-        scroll.vertical = true;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-
-        var viewport = CreateUI("Viewport", root.transform);
-        var vpImg = viewport.AddComponent<Image>();
-        vpImg.color = new Color(1, 1, 1, 0.01f);
-        var vpMask = viewport.AddComponent<Mask>();
-        vpMask.showMaskGraphic = false;
-        var vpRect = viewport.GetComponent<RectTransform>();
-        vpRect.anchorMin = Vector2.zero; vpRect.anchorMax = Vector2.one;
-        vpRect.offsetMin = Vector2.zero; vpRect.offsetMax = Vector2.zero;
-
-        var content = CreateUI("Content", viewport.transform);
-        var cRect = content.GetComponent<RectTransform>();
-        cRect.anchorMin = new Vector2(0, 1); cRect.anchorMax = new Vector2(0, 1);
-        cRect.pivot = new Vector2(0, 1);
-        cRect.anchoredPosition = Vector2.zero;
-        cRect.sizeDelta = new Vector2(3000, 0);
-
-        scroll.viewport = vpRect;
-        scroll.content = cRect;
-        return root;
-    }
-
-    private static void DestroyIfExists(string name)
-    {
-        var go = GameObject.Find(name);
-        if (go != null) Object.DestroyImmediate(go);
-    }
-
-    private static void EnsureEventSystem()
-    {
-        if (Object.FindObjectOfType<EventSystem>() != null) return;
-        var es = new GameObject("EventSystem");
-        es.AddComponent<EventSystem>();
-        es.AddComponent<StandaloneInputModule>();
-    }
-
-    private static GameObject CreateUI(string name, Transform parent)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        if (parent != null) go.transform.SetParent(parent, false);
-        return go;
+        return contentRT;
     }
 }
 #endif

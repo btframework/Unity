@@ -1,570 +1,555 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using System.IO;
-using TMPro;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.EventSystems;
+using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
 
 public static class WiiRemoteSceneBuilder
 {
-    private const string PrefabsFolder = "Assets/Prefabs";
+    private const float FormWidth  = 650f;
+    private const float FormHeight = 590f;
+    private const string ScenePath = "Assets/Scenes/WiiRemote.unity";
 
-    // ClientSize = 650 x 590 (+ 20 margin)
-    private const float CanvasW = 680f;
-    private const float CanvasH = 620f;
-
-    [MenuItem("Tools/Wii Remote/Build Scene")]
+    [MenuItem("Tools/WiiRemote/Build Scene")]
     public static void BuildScene()
     {
-        DestroyIfExists("WiiRemoteUI");
-        DestroyIfExists("WiiRemoteDemo");
-        DestroyIfExists("EventSystem");
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        EnsureEventSystem();
+        var camGO = new GameObject("Main Camera");
+        camGO.tag = "MainCamera";
+        var cam = camGO.AddComponent<Camera>();
+        cam.orthographic = true;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0.94f, 0.94f, 0.94f);
+        camGO.transform.position = new Vector3(0, 0, -10);
 
-        var canvasGO = CreateUI("WiiRemoteUI", null);
-        var canvas = canvasGO.AddComponent<Canvas>();
+        var esGO = new GameObject("EventSystem");
+        esGO.AddComponent<EventSystem>();
+        esGO.AddComponent<StandaloneInputModule>();
+
+        var canvasGO = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        var canvas = canvasGO.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-        var scaler = canvasGO.AddComponent<CanvasScaler>();
+        var scaler = canvasGO.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(CanvasW, CanvasH);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.referenceResolution = new Vector2(FormWidth, FormHeight);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 1f;
 
-        canvasGO.AddComponent<GraphicRaycaster>();
+        CreatePanel(canvasGO.transform, "FormBackground", 0, 0, FormWidth, FormHeight,
+            new Color(0.94f, 0.94f, 0.94f));
 
         var root = canvasGO.transform;
 
-        // ============================================================
-        //  Top bar (Discovery / Connection / Battery)
-        // ============================================================
-        var btDiscover   = MakeButton("BtDiscover",   "Discover",    root, 12,  12,  75, 23);
-        var btConnect    = MakeButton("BtConnect",    "Connect",     root, 183, 12,  75, 23);
-        var btDisconnect = MakeButton("BtDisconnect", "Disconnect",  root, 264, 12,  75, 23);
+        // ---- Row 1: Discover / Connect / Disconnect / Battery / LEDs / Rumble
+        var btDiscover        = CreateButton(root, "btDiscover", "Discover", 12, 12, 75, 23);
+        var btConnect         = CreateButton(root, "btConnect", "Connect", 183, 12, 75, 23);
+        var btDisconnect      = CreateButton(root, "btDisconnect", "Disconnect", 264, 12, 75, 23);
+        var laBattLevelCaption = CreateLabel(root, "laBattLevelCaption", "Batt level:", 361, 17, 54, 13);
+        var laBattLevel       = CreateLabel(root, "laBattLevel", "0.00", 421, 17, 28, 13);
+        var btGetLeds         = CreateButton(root, "btGetLeds", "Get LEDs", 364, 41, 75, 23);
+        var btGetStatus       = CreateButton(root, "btGetStatus", "Get status", 473, 12, 75, 23);
+        var btSetLeds         = CreateButton(root, "btSetLeds", "Set LEDs", 473, 41, 75, 23);
+        var btRumbleOn        = CreateButton(root, "btRumbleOn", "Rumble ON", 565, 12, 75, 23);
+        var btRumbleOff       = CreateButton(root, "btRumbleOff", "Rumble OFF", 565, 41, 75, 23);
 
-        MakeLabel("LaBattLevelCaption", "Batt level:", root, 361, 15, 54, 13);
-        var laBattLevel = MakeLabel("LaBattLevel", "0.00", root, 421, 15, 40, 13);
+        // ---- lvDevices
+        var lvDevicesContent = CreateListView(root, "lvDevices", 12, 41, 327, 97,
+            new[] { "Address", "Name" },
+            new float[] { 150, 150 });
 
-        var btGetLeds   = MakeButton("BtGetLeds",  "Get LEDs",   root, 364, 41, 75, 23);
-        var btGetStatus = MakeButton("BtGetStatus","Get status", root, 473, 12, 75, 23);
-        var btSetLeds   = MakeButton("BtSetLeds",  "Set LEDs",   root, 473, 41, 75, 23);
-        var btRumbleOn  = MakeButton("BtRumbleOn", "Rumble ON",  root, 565, 12, 75, 23);
-        var btRumbleOff = MakeButton("BtRumbleOff","Rumble OFF", root, 565, 41, 75, 23);
+        // ---- LEDs
+        var cbLed1 = CreateCheckBox(root, "cbLed1", "LED1", 376, 70, 53, 17, false);
+        var cbLed2 = CreateCheckBox(root, "cbLed2", "LED2", 376, 93, 53, 17, false);
+        var cbLed3 = CreateCheckBox(root, "cbLed3", "LED3", 435, 70, 53, 17, false);
+        var cbLed4 = CreateCheckBox(root, "cbLed4", "LED4", 435, 93, 53, 17, false);
 
-        // ============================================================
-        //  Devices table (12,41) 327x97, columns 150 | 150
-        // ============================================================
-        MakeHeaderBar("DevicesHeader", root, 12, 41, 327, 20,
-            new[] { 150f, 150f }, new[] { "Address", "Name" });
+        // ---- Buttons
+        CreateLabel(root, "laButtons", "Buttons", 12, 156, 50, 13, true);
+        var cbA     = CreateCheckBox(root, "cbA",     "A",     25,  182, 71, 17, false);
+        var cbB     = CreateCheckBox(root, "cbB",     "B",     25,  205, 71, 17, false);
+        var cbPlus  = CreateCheckBox(root, "cbPlus",  "Plus",  25,  228, 71, 17, false);
+        var cbHome  = CreateCheckBox(root, "cbHome",  "Home",  25,  251, 71, 17, false);
+        var cbMinus = CreateCheckBox(root, "cbMinus", "Minus", 25,  274, 71, 17, false);
+        var cbOne   = CreateCheckBox(root, "cbOne",   "One",   102, 182, 68, 17, false);
+        var cbTwo   = CreateCheckBox(root, "cbTwo",   "Two",   102, 205, 68, 17, false);
+        var cbUp    = CreateCheckBox(root, "cbUp",    "Up",    102, 228, 68, 17, false);
+        var cbDown  = CreateCheckBox(root, "cbDown",  "Down",  102, 251, 68, 17, false);
+        var cbLeft  = CreateCheckBox(root, "cbLeft",  "Left",  102, 274, 68, 17, false);
+        var cbRight = CreateCheckBox(root, "cbRight", "Right", 40,  297, 56, 17, false);
 
-        var devicesScroll  = MakeScrollView("DevicesScroll", root, 12, 61, 327, 77);
-        var devicesContent = devicesScroll.transform.Find("Viewport/Content");
-        AddVerticalListGroup(devicesContent);
+        // ---- Accel
+        CreateLabel(root, "laAccel", "Accel", 12, 341, 39, 13, true);
+        CreateLabel(root, "laXCaption", "X:", 22, 365, 17, 13);
+        CreateLabel(root, "laYCaption", "Y:", 22, 390, 17, 13);
+        CreateLabel(root, "laZCaption", "Z:", 22, 414, 17, 13);
+        var laX = CreateLabel(root, "laX", "0", 45, 365, 13, 13);
+        var laY = CreateLabel(root, "laY", "0", 45, 390, 13, 13);
+        var laZ = CreateLabel(root, "laZ", "0", 45, 414, 13, 13);
+        var btEnableAccel  = CreateButton(root, "btEnableAccel",  "Enable",  102, 360, 75, 23);
+        var btDisableAccel = CreateButton(root, "btDisableAccel", "Disable", 102, 390, 75, 23);
 
-        // ============================================================
-        //  LEDs (4 toggles, 2x2)
-        // ============================================================
-        var tgLed1 = MakeToggle("CbLed1", "LED1", root, 376, 70, 53, 17);
-        var tgLed2 = MakeToggle("CbLed2", "LED2", root, 376, 93, 53, 17);
-        var tgLed3 = MakeToggle("CbLed3", "LED3", root, 435, 70, 53, 17);
-        var tgLed4 = MakeToggle("CbLed4", "LED4", root, 435, 93, 53, 17);
+        // ---- IR
+        CreateLabel(root, "laIrCaption", "IR", 223, 156, 20, 13, true);
+        CreateLabel(root, "laIrModeCpation", "Mode:", 223, 183, 37, 13);
+        var laIrMode = CreateLabel(root, "laIrMode", "Off", 293, 186, 21, 13);
 
-        // ============================================================
-        //  Buttons group (the Table: A..Right)
-        // ============================================================
-        MakeBoldLabel("LaButtons", "Buttons", root, 12, 154, 60, 15);
+        // Sensor 0
+        CreateLabel(root, "laSensor0Caption", "Sensor 0", 223, 205, 49, 13);
+        CreateLabel(root, "laSensor0PositionCaption", "Position: ", 237, 228, 50, 13);
+        CreateLabel(root, "laSensor0SizeCaption", "Size:", 237, 251, 30, 13);
+        CreateLabel(root, "laSensor0FoundCaption", "Found:", 237, 274, 40, 13);
+        var laSensor0Position = CreateLabel(root, "laSensor0Position", "0; 0", 293, 228, 25, 13);
+        var laSensor0Size     = CreateLabel(root, "laSensor0Size", "0", 293, 251, 13, 13);
+        var laSensor0Found    = CreateLabel(root, "laSensor0Found", "False", 293, 274, 32, 13);
 
-        var tgA     = MakeToggle("CbA",     "A",     root, 25,  180, 71, 17);
-        var tgB     = MakeToggle("CbB",     "B",     root, 25,  203, 71, 17);
-        var tgPlus  = MakeToggle("CbPlus",  "Plus",  root, 25,  226, 71, 17);
-        var tgHome  = MakeToggle("CbHome",  "Home",  root, 25,  249, 71, 17);
-        var tgMinus = MakeToggle("CbMinus", "Minus", root, 25,  272, 71, 17);
-        var tgOne   = MakeToggle("CbOne",   "One",   root, 102, 180, 68, 17);
-        var tgTwo   = MakeToggle("CbTwo",   "Two",   root, 102, 203, 68, 17);
-        var tgUp    = MakeToggle("CbUp",    "Up",    root, 102, 226, 68, 17);
-        var tgDown  = MakeToggle("CbDown",  "Down",  root, 102, 249, 68, 17);
-        var tgLeft  = MakeToggle("CbLeft",  "Left",  root, 102, 272, 68, 17);
-        var tgRight = MakeToggle("CbRight", "Right", root, 40,  295, 56, 17);
+        // Sensor 1
+        CreateLabel(root, "laSensor1Caption", "Sensor 1", 350, 205, 49, 13);
+        CreateLabel(root, "laSensor1PositionCaption", "Position: ", 364, 228, 50, 13);
+        CreateLabel(root, "laSensor1SizeCaption", "Size:", 364, 251, 30, 13);
+        CreateLabel(root, "laSensor1FoundCaption", "Found:", 364, 274, 40, 13);
+        var laSensor1Position = CreateLabel(root, "laSensor1Position", "0; 0", 420, 228, 25, 13);
+        var laSensor1Size     = CreateLabel(root, "laSensor1Size", "0", 420, 251, 13, 13);
+        var laSensor1Found    = CreateLabel(root, "laSensor1Found", "False", 420, 274, 32, 13);
 
-        // ============================================================
-        //  Accelerometer
-        // ============================================================
-        MakeBoldLabel("LaAccel", "Accel", root, 12, 339, 40, 15);
+        // Sensor 2
+        CreateLabel(root, "laSensor2Caption", "Sensor 2", 223, 297, 49, 13);
+        CreateLabel(root, "laSensor2PositionCaption", "Position: ", 237, 321, 50, 13);
+        CreateLabel(root, "laSensor2SizeCaption", "Size:", 237, 344, 30, 13);
+        CreateLabel(root, "laSensor2FoundCaption", "Found:", 237, 367, 40, 13);
+        var laSensor2Position = CreateLabel(root, "laSensor2Position", "0; 0", 293, 321, 25, 13);
+        var laSensor2Size     = CreateLabel(root, "laSensor2Size", "0", 293, 344, 13, 13);
+        var laSensor2Found    = CreateLabel(root, "laSensor2Found", "False", 293, 367, 32, 13);
 
-        MakeLabel("LaXCaption", "X:", root, 22, 363, 20, 13);
-        MakeLabel("LaYCaption", "Y:", root, 22, 388, 20, 13);
-        MakeLabel("LaZCaption", "Z:", root, 22, 412, 20, 13);
-        var laX = MakeLabel("LaX", "0", root, 45, 363, 30, 13);
-        var laY = MakeLabel("LaY", "0", root, 45, 388, 30, 13);
-        var laZ = MakeLabel("LaZ", "0", root, 45, 412, 30, 13);
+        // Sensor 3
+        CreateLabel(root, "laSensor3Caption", "Sensor 3", 350, 297, 49, 13);
+        CreateLabel(root, "laSensor3PositionCaption", "Position: ", 364, 321, 50, 13);
+        CreateLabel(root, "laSensor3SizeCpation", "Size:", 364, 344, 30, 13);
+        CreateLabel(root, "laSensor3FoundCaption", "Found:", 364, 367, 40, 13);
+        var laSensor3Position = CreateLabel(root, "laSensor3Position", "0; 0", 420, 321, 25, 13);
+        var laSensor3Size     = CreateLabel(root, "laSensor3Size", "0", 420, 344, 13, 13);
+        var laSensor3Found    = CreateLabel(root, "laSensor3Found", "False", 420, 367, 32, 13);
 
-        var btEnableAccel  = MakeButton("BtEnableAccel", "Enable",  root, 102, 360, 75, 23);
-        var btDisableAccel = MakeButton("BtDisableAccel","Disable", root, 102, 390, 75, 23);
+        var btEnableIr  = CreateButton(root, "btEnableIr",  "Enable",  226, 390, 75, 23);
+        var btDisableIr = CreateButton(root, "btDisableIr", "Disable", 307, 390, 75, 23);
+        CreateLabel(root, "laIrSensitivityCaption", "Sensitivity:", 350, 182, 57, 13);
+        var laIrSensitivity = CreateLabel(root, "laIrSensitivity", "Off", 414, 182, 21, 13);
 
-        // ============================================================
-        //  IR
-        // ============================================================
-        MakeBoldLabel("LaIrCaption", "IR", root, 223, 154, 25, 15);
-        MakeLabel("LaIrModeCaption", "Mode:", root, 223, 181, 45, 13);
-        var laIrMode = MakeLabel("LaIrMode", "Off", root, 293, 183, 40, 13);
-        MakeLabel("LaIrSensitivityCaption", "Sensitivity:", root, 350, 180, 80, 13);
-        var laIrSensitivity = MakeLabel("LaIrSensitivity", "Off", root, 414, 180, 60, 13);
+        // ---- Nunchuk
+        CreateLabel(root, "laNunchukCaption", "Nunchuk", 492, 156, 58, 13, true);
+        var laNunchukState = CreateLabel(root, "laNunchukState", "Detached", 584, 156, 54, 13);
+        CreateLabel(root, "laNunchukXCaption", "X:", 513, 182, 17, 13);
+        CreateLabel(root, "laNunchukYCaption", "Y:", 513, 206, 17, 13);
+        CreateLabel(root, "laNunchukZCaption", "Z:", 513, 228, 17, 13);
+        CreateLabel(root, "laNunchukJoyXCaption", "Joy X:", 513, 251, 36, 13);
+        CreateLabel(root, "laNunchukJoyYCaption", "Joy Y:", 513, 274, 36, 13);
+        var laNunchukX    = CreateLabel(root, "laNunchukX", "0", 536, 183, 13, 13);
+        var laNunchukY    = CreateLabel(root, "laNunchukY", "0", 536, 205, 13, 13);
+        var laNunchukZ    = CreateLabel(root, "laNunchukZ", "0", 536, 228, 13, 13);
+        var laNunchukJoyX = CreateLabel(root, "laNunchukJoyX", "0", 555, 251, 13, 13);
+        var laNunchukJoyY = CreateLabel(root, "laNunchukJoyY", "0", 555, 274, 13, 13);
+        var cbNunchukC    = CreateCheckBox(root, "cbNunchukC", "C", 598, 182, 33, 17, false);
+        var cbNunchukZ    = CreateCheckBox(root, "cbNunchukZ", "Z", 598, 204, 33, 17, false);
 
-        // Sensors
-        MakeLabel("LaSensor0Caption", "Sensor 0", root, 223, 203, 60, 13);
-        MakeLabel("LaSensor0PositionCaption", "Position: ", root, 237, 226, 60, 13);
-        MakeLabel("LaSensor0SizeCaption", "Size:", root, 237, 249, 40, 13);
-        MakeLabel("LaSensor0FoundCaption", "Found:", root, 237, 272, 50, 13);
-        var laSensor0Position = MakeLabel("LaSensor0Position", "0; 0", root, 293, 226, 60, 13);
-        var laSensor0Size     = MakeLabel("LaSensor0Size",     "0",    root, 293, 249, 40, 13);
-        var laSensor0Found    = MakeLabel("LaSensor0Found",    "False",root, 293, 272, 50, 13);
+        // ---- Balance board
+        CreateLabel(root, "laBalanceBoardCaption", "Balance board", 492, 301, 89, 13, true);
+        var laBalanceBoardState = CreateLabel(root, "laBalanceBoardState", "Detached", 587, 301, 54, 13);
+        CreateLabel(root, "laBbTopRightCaption", "Top right:", 513, 321, 52, 13);
+        CreateLabel(root, "laBbTopLeftCaption", "Top left:", 515, 344, 46, 13);
+        CreateLabel(root, "laBbBottomRightCaption", "Bottom right:", 515, 367, 66, 13);
+        CreateLabel(root, "laBbBottomLeftCaption", "Bottom left:", 515, 390, 60, 13);
+        var laBbTopRight    = CreateLabel(root, "laBbTopRight", "0", 596, 321, 13, 13);
+        var laBbTopLeft     = CreateLabel(root, "laBbTopLeft", "0", 595, 344, 13, 13);
+        var laBbBottomRight = CreateLabel(root, "laBbBottomRight", "0", 595, 367, 13, 13);
+        var laBbBottomLeft  = CreateLabel(root, "laBbBottomLeft", "0", 595, 390, 13, 13);
 
-        MakeLabel("LaSensor1Caption", "Sensor 1", root, 350, 203, 60, 13);
-        MakeLabel("LaSensor1PositionCaption", "Position: ", root, 364, 226, 60, 13);
-        MakeLabel("LaSensor1SizeCaption", "Size:", root, 364, 249, 40, 13);
-        MakeLabel("LaSensor1FoundCaption", "Found:", root, 364, 272, 50, 13);
-        var laSensor1Position = MakeLabel("LaSensor1Position", "0; 0", root, 420, 226, 60, 13);
-        var laSensor1Size     = MakeLabel("LaSensor1Size",     "0",    root, 420, 249, 40, 13);
-        var laSensor1Found    = MakeLabel("LaSensor1Found",    "False",root, 420, 272, 50, 13);
+        // ---- Log
+        var lbLogText = CreateListBox(root, "lbLog", 12, 482, 626, 95);
 
-        MakeLabel("LaSensor2Caption", "Sensor 2", root, 223, 295, 60, 13);
-        MakeLabel("LaSensor2PositionCaption", "Position: ", root, 237, 319, 60, 13);
-        MakeLabel("LaSensor2SizeCaption", "Size:", root, 237, 342, 40, 13);
-        MakeLabel("LaSensor2FoundCaption", "Found:", root, 237, 365, 50, 13);
-        var laSensor2Position = MakeLabel("LaSensor2Position", "0; 0", root, 293, 319, 60, 13);
-        var laSensor2Size     = MakeLabel("LaSensor2Size",     "0",    root, 293, 342, 40, 13);
-        var laSensor2Found    = MakeLabel("LaSensor2Found",    "False",root, 293, 365, 50, 13);
+        // ---- btClear
+        var btClear = CreateButton(root, "btClear", "Clear", 12, 453, 75, 23);
 
-        MakeLabel("LaSensor3Caption", "Sensor 3", root, 350, 295, 60, 13);
-        MakeLabel("LaSensor3PositionCaption", "Position: ", root, 364, 319, 60, 13);
-        MakeLabel("LaSensor3SizeCaption", "Size:", root, 364, 342, 40, 13);
-        MakeLabel("LaSensor3FoundCaption", "Found:", root, 364, 365, 50, 13);
-        var laSensor3Position = MakeLabel("LaSensor3Position", "0; 0", root, 420, 319, 60, 13);
-        var laSensor3Size     = MakeLabel("LaSensor3Size",     "0",    root, 420, 342, 40, 13);
-        var laSensor3Found    = MakeLabel("LaSensor3Found",    "False",root, 420, 365, 50, 13);
+        // ---- Controller
+        var ctrlGO = new GameObject("WiiRemoteController");
+        var ctrl = ctrlGO.AddComponent<WiiRemoteController>();
 
-        var btEnableIr  = MakeButton("BtEnableIr", "Enable",  root, 226, 390, 75, 23);
-        var btDisableIr = MakeButton("BtDisableIr","Disable", root, 307, 390, 75, 23);
+        ctrl.btDiscover       = btDiscover.GetComponent<Button>();
+        ctrl.btConnect        = btConnect.GetComponent<Button>();
+        ctrl.btDisconnect     = btDisconnect.GetComponent<Button>();
+        ctrl.btGetLeds        = btGetLeds.GetComponent<Button>();
+        ctrl.btGetStatus      = btGetStatus.GetComponent<Button>();
+        ctrl.btSetLeds        = btSetLeds.GetComponent<Button>();
+        ctrl.btRumbleOn       = btRumbleOn.GetComponent<Button>();
+        ctrl.btRumbleOff      = btRumbleOff.GetComponent<Button>();
+        ctrl.btEnableAccel    = btEnableAccel.GetComponent<Button>();
+        ctrl.btDisableAccel   = btDisableAccel.GetComponent<Button>();
+        ctrl.btEnableIr       = btEnableIr.GetComponent<Button>();
+        ctrl.btDisableIr      = btDisableIr.GetComponent<Button>();
+        ctrl.btClear          = btClear.GetComponent<Button>();
 
-        // ============================================================
-        //  Nunchuk
-        // ============================================================
-        MakeBoldLabel("LaNunchukCaption", "Nunchuk", root, 492, 154, 100, 15);
-        var laNunchukState = MakeLabel("LaNunchukState", "Detached", root, 584, 154, 70, 13);
+        ctrl.cbLed1 = cbLed1;
+        ctrl.cbLed2 = cbLed2;
+        ctrl.cbLed3 = cbLed3;
+        ctrl.cbLed4 = cbLed4;
 
-        MakeLabel("LaNunchukXCaption", "X:", root, 513, 180, 20, 13);
-        MakeLabel("LaNunchukYCaption", "Y:", root, 513, 204, 20, 13);
-        MakeLabel("LaNunchukZCaption", "Z:", root, 513, 226, 20, 13);
-        MakeLabel("LaNunchukJoyXCaption", "Joy X:", root, 513, 249, 45, 13);
-        MakeLabel("LaNunchukJoyYCaption", "Joy Y:", root, 513, 272, 45, 13);
+        ctrl.cbA     = cbA;
+        ctrl.cbB     = cbB;
+        ctrl.cbPlus  = cbPlus;
+        ctrl.cbHome  = cbHome;
+        ctrl.cbMinus = cbMinus;
+        ctrl.cbOne   = cbOne;
+        ctrl.cbTwo   = cbTwo;
+        ctrl.cbUp    = cbUp;
+        ctrl.cbDown  = cbDown;
+        ctrl.cbLeft  = cbLeft;
+        ctrl.cbRight = cbRight;
 
-        var laNunchukX    = MakeLabel("LaNunchukX",    "0", root, 536, 181, 40, 13);
-        var laNunchukY    = MakeLabel("LaNunchukY",    "0", root, 536, 203, 40, 13);
-        var laNunchukZ    = MakeLabel("LaNunchukZ",    "0", root, 536, 226, 40, 13);
-        var laNunchukJoyX = MakeLabel("LaNunchukJoyX", "0", root, 555, 249, 40, 13);
-        var laNunchukJoyY = MakeLabel("LaNunchukJoyY", "0", root, 555, 272, 40, 13);
+        ctrl.cbNunchukC = cbNunchukC;
+        ctrl.cbNunchukZ = cbNunchukZ;
 
-        var tgNunchukC = MakeToggle("CbNunchukC", "C", root, 598, 180, 33, 17);
-        var tgNunchukZ = MakeToggle("CbNunchukZ", "Z", root, 598, 202, 33, 17);
+        ctrl.laBattLevel        = laBattLevel;
+        ctrl.laX                = laX;
+        ctrl.laY                = laY;
+        ctrl.laZ                = laZ;
+        ctrl.laIrMode           = laIrMode;
+        ctrl.laIrSensitivity    = laIrSensitivity;
 
-        // ============================================================
-        //  Balance board
-        // ============================================================
-        MakeBoldLabel("LaBalanceBoardCaption", "Balance board", root, 492, 299, 100, 15);
-        var laBalanceBoardState = MakeLabel("LaBalanceBoardState", "Detached", root, 587, 299, 70, 13);
+        ctrl.laSensor0Position  = laSensor0Position;
+        ctrl.laSensor0Size      = laSensor0Size;
+        ctrl.laSensor0Found     = laSensor0Found;
+        ctrl.laSensor1Position  = laSensor1Position;
+        ctrl.laSensor1Size      = laSensor1Size;
+        ctrl.laSensor1Found     = laSensor1Found;
+        ctrl.laSensor2Position  = laSensor2Position;
+        ctrl.laSensor2Size      = laSensor2Size;
+        ctrl.laSensor2Found     = laSensor2Found;
+        ctrl.laSensor3Position  = laSensor3Position;
+        ctrl.laSensor3Size      = laSensor3Size;
+        ctrl.laSensor3Found     = laSensor3Found;
 
-        MakeLabel("LaBbTopRightCaption", "Top right:", root, 513, 319, 80, 13);
-        MakeLabel("LaBbTopLeftCaption", "Top left:", root, 515, 342, 80, 13);
-        MakeLabel("LaBbBottomRightCaption", "Bottom right:", root, 515, 365, 90, 13);
-        MakeLabel("LaBbBottomLeftCaption", "Bottom left:", root, 515, 388, 85, 13);
+        ctrl.laNunchukState = laNunchukState;
+        ctrl.laNunchukX     = laNunchukX;
+        ctrl.laNunchukY     = laNunchukY;
+        ctrl.laNunchukZ     = laNunchukZ;
+        ctrl.laNunchukJoyX  = laNunchukJoyX;
+        ctrl.laNunchukJoyY  = laNunchukJoyY;
 
-        var laBbTopRight    = MakeLabel("LaBbTopRight",    "0", root, 596, 319, 40, 13);
-        var laBbTopLeft     = MakeLabel("LaBbTopLeft",     "0", root, 595, 342, 40, 13);
-        var laBbBottomRight = MakeLabel("LaBbBottomRight", "0", root, 595, 365, 40, 13);
-        var laBbBottomLeft  = MakeLabel("LaBbBottomLeft",  "0", root, 595, 388, 40, 13);
+        ctrl.laBalanceBoardState = laBalanceBoardState;
+        ctrl.laBbTopRight        = laBbTopRight;
+        ctrl.laBbTopLeft         = laBbTopLeft;
+        ctrl.laBbBottomRight     = laBbBottomRight;
+        ctrl.laBbBottomLeft      = laBbBottomLeft;
 
-        // ============================================================
-        //  Log + Clear
-        // ============================================================
-        var logScroll  = MakeScrollView("LogScroll", root, 12, 482, 626, 95);
-        var logContent = logScroll.transform.Find("Viewport/Content");
-        AddVerticalListGroup(logContent);
+        ctrl.lvDevicesContent = lvDevicesContent;
+        ctrl.lbLogText        = lbLogText;
 
-        var btClear = MakeButton("BtClear", "Clear", root, 12, 453, 75, 23);
+        Directory.CreateDirectory("Assets/Scenes");
+        EditorSceneManager.MarkSceneDirty(scene);
+        bool saved = EditorSceneManager.SaveScene(scene, ScenePath);
+        if (!saved)
+        {
+            Debug.LogError("[WiiRemote] Failed to save scene: " + ScenePath);
+            return;
+        }
 
-        // ============================================================
-        //  Prefabs
-        // ============================================================
-        var deviceRow = MakeTableRowPrefab("WiiDeviceRow", new[] { 150f, 150f }, 22f);
-        var logRow    = MakeTableRowPrefab("WiiLogRow",    new[] { 620f }, 20f);
+        AddSceneToBuildSettings(ScenePath);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
 
-        // ============================================================
-        //  Main GameObject + links
-        // ============================================================
-        var demoGO = new GameObject("WiiRemoteDemo");
-        var demo = demoGO.AddComponent<WiiRemoteDemo>();
+        var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
+        Selection.activeObject = sceneAsset;
+        EditorGUIUtility.PingObject(sceneAsset);
 
-        demo.discoverButton   = btDiscover;
-        demo.connectButton    = btConnect;
-        demo.disconnectButton = btDisconnect;
-        demo.battLevelLabel   = laBattLevel;
-
-        demo.getLedsButton   = btGetLeds;
-        demo.getStatusButton = btGetStatus;
-        demo.setLedsButton   = btSetLeds;
-        demo.rumbleOnButton  = btRumbleOn;
-        demo.rumbleOffButton = btRumbleOff;
-
-        demo.led1Toggle = tgLed1;
-        demo.led2Toggle = tgLed2;
-        demo.led3Toggle = tgLed3;
-        demo.led4Toggle = tgLed4;
-
-        demo.devicesContent  = devicesContent;
-        demo.deviceRowPrefab = deviceRow;
-
-        demo.aToggle     = tgA;
-        demo.bToggle     = tgB;
-        demo.plusToggle  = tgPlus;
-        demo.homeToggle  = tgHome;
-        demo.minusToggle = tgMinus;
-        demo.oneToggle   = tgOne;
-        demo.twoToggle   = tgTwo;
-        demo.upToggle    = tgUp;
-        demo.downToggle  = tgDown;
-        demo.leftToggle  = tgLeft;
-        demo.rightToggle = tgRight;
-
-        demo.accelXLabel       = laX;
-        demo.accelYLabel       = laY;
-        demo.accelZLabel       = laZ;
-        demo.enableAccelButton = btEnableAccel;
-        demo.disableAccelButton= btDisableAccel;
-
-        demo.irModeLabel        = laIrMode;
-        demo.irSensitivityLabel = laIrSensitivity;
-
-        demo.irSensor0PositionLabel = laSensor0Position;
-        demo.irSensor0SizeLabel     = laSensor0Size;
-        demo.irSensor0FoundLabel    = laSensor0Found;
-
-        demo.irSensor1PositionLabel = laSensor1Position;
-        demo.irSensor1SizeLabel     = laSensor1Size;
-        demo.irSensor1FoundLabel    = laSensor1Found;
-
-        demo.irSensor2PositionLabel = laSensor2Position;
-        demo.irSensor2SizeLabel     = laSensor2Size;
-        demo.irSensor2FoundLabel    = laSensor2Found;
-
-        demo.irSensor3PositionLabel = laSensor3Position;
-        demo.irSensor3SizeLabel     = laSensor3Size;
-        demo.irSensor3FoundLabel    = laSensor3Found;
-
-        demo.enableIrButton  = btEnableIr;
-        demo.disableIrButton = btDisableIr;
-
-        demo.nunchukStateLabel = laNunchukState;
-        demo.nunchukXLabel     = laNunchukX;
-        demo.nunchukYLabel     = laNunchukY;
-        demo.nunchukZLabel     = laNunchukZ;
-        demo.nunchukJoyXLabel  = laNunchukJoyX;
-        demo.nunchukJoyYLabel  = laNunchukJoyY;
-        demo.nunchukCToggle    = tgNunchukC;
-        demo.nunchukZToggle    = tgNunchukZ;
-
-        demo.balanceBoardStateLabel = laBalanceBoardState;
-        demo.bbTopRightLabel        = laBbTopRight;
-        demo.bbTopLeftLabel         = laBbTopLeft;
-        demo.bbBottomRightLabel     = laBbBottomRight;
-        demo.bbBottomLeftLabel      = laBbBottomLeft;
-
-        demo.logContent     = logContent;
-        demo.logRowPrefab   = logRow;
-        demo.clearLogButton = btClear;
-
-        Selection.activeGameObject = demoGO;
-        EditorGUIUtility.PingObject(demoGO);
-
-        Debug.Log("Wii Remote Demo UI built using the original layout.");
+        Debug.Log("[WiiRemote] Scene created and saved: " + ScenePath);
     }
 
-    // ================================================================
-    //  Position
-    // ================================================================
-    private static void Place(GameObject go, float x, float y, float w, float h)
+    private static void AddSceneToBuildSettings(string scenePath)
     {
+        var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        foreach (var s in scenes)
+            if (s.path == scenePath) return;
+        scenes.Add(new EditorBuildSettingsScene(scenePath, true));
+        EditorBuildSettings.scenes = scenes.ToArray();
+    }
+
+    // ==========================================================
+    //  Primitives
+    // ==========================================================
+    private static GameObject CreatePanel(Transform parent, string name, float x, float y, float w, float h, Color color)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot     = new Vector2(0, 1);
         rt.anchoredPosition = new Vector2(x, -y);
         rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = color;
+        return go;
     }
 
-    // ================================================================
-    //  Controls
-    // ================================================================
-    private static Button MakeButton(string name, string label, Transform parent,
-        float x, float y, float w, float h)
+    private static TextMeshProUGUI CreateLabel(Transform parent, string name, string text,
+        float x, float y, float w, float h, bool bold = false)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        var go = new GameObject(name, typeof(RectTransform));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        var tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = 11;
+        if (bold) tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.TopLeft;
+        tmp.color = Color.black;
+        tmp.raycastTarget = false;
+        return tmp;
+    }
 
-        var img = go.AddComponent<Image>();
-        img.color = new Color(0.22f, 0.22f, 0.22f, 1f);
+    private static GameObject CreateButton(Transform parent, string name, string label, float x, float y, float w, float h)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = new Color(0.87f, 0.87f, 0.87f);
 
-        var btn = go.AddComponent<Button>();
+        var btn = go.GetComponent<Button>();
         var c = btn.colors;
-        c.highlightedColor = new Color(0.35f, 0.35f, 0.35f);
-        c.pressedColor     = new Color(0.15f, 0.15f, 0.15f);
+        c.normalColor      = Color.white;
+        c.highlightedColor = new Color(0.93f, 0.93f, 0.93f);
+        c.pressedColor     = new Color(0.75f, 0.75f, 0.75f);
         btn.colors = c;
 
-        var textGO = CreateUI("Text", go.transform);
-        var text = textGO.AddComponent<TextMeshProUGUI>();
-        text.text = label;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        text.fontSize = 12;
-        StretchFull(textGO);
-        return btn;
+        var txtGO = new GameObject("Text", typeof(RectTransform));
+        txtGO.transform.SetParent(go.transform, false);
+        var txtRT = txtGO.GetComponent<RectTransform>();
+        txtRT.anchorMin = Vector2.zero;
+        txtRT.anchorMax = Vector2.one;
+        txtRT.offsetMin = Vector2.zero;
+        txtRT.offsetMax = Vector2.zero;
+        var tmp = txtGO.AddComponent<TextMeshProUGUI>();
+        tmp.text = label;
+        tmp.fontSize = 11;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.black;
+        tmp.raycastTarget = false;
+
+        return go;
     }
 
-    private static Toggle MakeToggle(string name, string label, Transform parent,
-        float x, float y, float w, float h)
+    private static Toggle CreateCheckBox(Transform parent, string name, string label,
+        float x, float y, float w, float h, bool isOn)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        var go = new GameObject(name, typeof(RectTransform), typeof(Toggle));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
 
-        var toggle = go.AddComponent<Toggle>();
+        var boxGO = new GameObject("Box", typeof(RectTransform), typeof(Image));
+        var boxRT = boxGO.GetComponent<RectTransform>();
+        boxRT.SetParent(go.transform, false);
+        boxRT.anchorMin = new Vector2(0, 0.5f);
+        boxRT.anchorMax = new Vector2(0, 0.5f);
+        boxRT.pivot     = new Vector2(0, 0.5f);
+        boxRT.anchoredPosition = Vector2.zero;
+        boxRT.sizeDelta = new Vector2(13, 13);
+        var boxImg = boxGO.GetComponent<Image>();
+        boxImg.color = Color.white;
 
-        var bg = CreateUI("Background", go.transform);
-        var bgRect = bg.GetComponent<RectTransform>();
-        bgRect.anchorMin = new Vector2(0, 0.5f);
-        bgRect.anchorMax = new Vector2(0, 0.5f);
-        bgRect.pivot     = new Vector2(0, 0.5f);
-        bgRect.anchoredPosition = Vector2.zero;
-        bgRect.sizeDelta = new Vector2(13, 13);
-        var bgImg = bg.AddComponent<Image>();
-        bgImg.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+        var checkGO = new GameObject("Check", typeof(RectTransform), typeof(Image));
+        var checkRT = checkGO.GetComponent<RectTransform>();
+        checkRT.SetParent(boxGO.transform, false);
+        checkRT.anchorMin = Vector2.zero;
+        checkRT.anchorMax = Vector2.one;
+        checkRT.offsetMin = new Vector2(2, 2);
+        checkRT.offsetMax = new Vector2(-2, -2);
+        var checkImg = checkGO.GetComponent<Image>();
+        checkImg.color = new Color(0.2f, 0.2f, 0.2f);
+        checkImg.raycastTarget = false;
 
-        var cm = CreateUI("Checkmark", bg.transform);
-        var cmRect = cm.GetComponent<RectTransform>();
-        cmRect.anchorMin = new Vector2(0.5f, 0.5f);
-        cmRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cmRect.pivot     = new Vector2(0.5f, 0.5f);
-        cmRect.anchoredPosition = Vector2.zero;
-        cmRect.sizeDelta = new Vector2(9, 9);
-        var cmImg = cm.AddComponent<Image>();
-        cmImg.color = new Color(0.05f, 0.05f, 0.05f, 1f);
+        var labelGO = new GameObject("Label", typeof(RectTransform));
+        var labelRT = labelGO.GetComponent<RectTransform>();
+        labelRT.SetParent(go.transform, false);
+        labelRT.anchorMin = Vector2.zero;
+        labelRT.anchorMax = Vector2.one;
+        labelRT.offsetMin = new Vector2(17, 0);
+        labelRT.offsetMax = Vector2.zero;
+        var labelTmp = labelGO.AddComponent<TextMeshProUGUI>();
+        labelTmp.text = label;
+        labelTmp.fontSize = 11;
+        labelTmp.color = Color.black;
+        labelTmp.alignment = TextAlignmentOptions.Left;
+        labelTmp.enableWordWrapping = false;
+        labelTmp.raycastTarget = false;
 
-        var lbl = CreateUI("Label", go.transform);
-        var lblRect = lbl.GetComponent<RectTransform>();
-        lblRect.anchorMin = new Vector2(0, 0);
-        lblRect.anchorMax = new Vector2(1, 1);
-        lblRect.offsetMin = new Vector2(17, 0);
-        lblRect.offsetMax = Vector2.zero;
-        var lblText = lbl.AddComponent<TextMeshProUGUI>();
-        lblText.text = label;
-        lblText.color = Color.white;
-        lblText.fontSize = 12;
-        lblText.alignment = TextAlignmentOptions.MidlineLeft;
-        lblText.enableWordWrapping = false;
-        lblText.overflowMode = TextOverflowModes.Overflow;
+        var toggle = go.GetComponent<Toggle>();
+        toggle.targetGraphic = boxImg;
+        toggle.graphic = checkImg;
+        toggle.isOn = isOn;
 
-        toggle.targetGraphic = bgImg;
-        toggle.graphic       = cmImg;
         return toggle;
     }
 
-    private static TMP_Text MakeLabel(string name, string text, Transform parent,
-        float x, float y, float w, float h)
+    private static RectTransform CreateListView(Transform parent, string name,
+        float x, float y, float w, float h, string[] headers, float[] widths)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        const float RowH = 18f;
+        var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+        var rt = root.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        root.GetComponent<Image>().color = Color.white;
 
-        var t = go.AddComponent<TextMeshProUGUI>();
-        t.text = text;
-        t.color = Color.white;
-        t.fontSize = 12;
-        t.alignment = TextAlignmentOptions.MidlineLeft;
-        t.enableWordWrapping = false;
-        t.overflowMode = TextOverflowModes.Overflow;
-        return t;
-    }
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        viewportRT.SetParent(root.transform, false);
+        viewportRT.anchorMin = Vector2.zero;
+        viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = new Vector2(1, 1);
+        viewportRT.offsetMax = new Vector2(-1, -1);
+        viewportGO.GetComponent<Image>().color = new Color(1, 1, 1, 0.01f);
+        viewportGO.GetComponent<Mask>().showMaskGraphic = false;
 
-    private static TMP_Text MakeBoldLabel(string name, string text, Transform parent,
-        float x, float y, float w, float h)
-    {
-        var t = MakeLabel(name, text, parent, x, y, w, h);
-        t.fontStyle = FontStyles.Bold;
-        return t;
-    }
+        float contentW = 0;
+        for (int i = 0; i < widths.Length; i++) contentW += widths[i];
 
-    private static void MakeHeaderBar(string name, Transform parent,
-        float x, float y, float w, float h, float[] widths, string[] headers)
-    {
-        var bar = CreateUI(name, parent);
-        Place(bar, x, y, w, h);
-
-        var bg = bar.AddComponent<Image>();
-        bg.color = new Color(0.18f, 0.18f, 0.18f, 1f);
-
-        float offset = 4;
-        for (int i = 0; i < headers.Length; i++)
-        {
-            var t = CreateUI("H_" + headers[i], bar.transform);
-            var tRect = t.GetComponent<RectTransform>();
-            tRect.anchorMin = new Vector2(0, 0);
-            tRect.anchorMax = new Vector2(0, 1);
-            tRect.pivot     = new Vector2(0, 0.5f);
-            tRect.anchoredPosition = new Vector2(offset, 0);
-            tRect.sizeDelta = new Vector2(widths[i], 0);
-
-            var tmp = t.AddComponent<TextMeshProUGUI>();
-            tmp.text = headers[i];
-            tmp.color = Color.white;
-            tmp.fontSize = 11;
-            tmp.fontStyle = FontStyles.Bold;
-            tmp.alignment = TextAlignmentOptions.MidlineLeft;
-            tmp.enableWordWrapping = false;
-            tmp.overflowMode = TextOverflowModes.Ellipsis;
-
-            offset += widths[i];
-        }
-    }
-
-    private static GameObject MakeScrollView(string name, Transform parent,
-        float x, float y, float w, float h)
-    {
-        var root = CreateUI(name, parent);
-        Place(root, x, y, w, h);
-
-        var rootImg = root.AddComponent<Image>();
-        rootImg.color = Color.white;
-
-        var scroll = root.AddComponent<ScrollRect>();
-        scroll.horizontal = false;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-
-        var viewport = CreateUI("Viewport", root.transform);
-        StretchFull(viewport);
-        var vpImg = viewport.AddComponent<Image>();
-        vpImg.color = new Color(1, 1, 1, 0.001f);
-        var vpMask = viewport.AddComponent<Mask>();
-        vpMask.showMaskGraphic = false;
-
-        var content = CreateUI("Content", viewport.transform);
-        var cRect = content.GetComponent<RectTransform>();
-        cRect.anchorMin = new Vector2(0, 1);
-        cRect.anchorMax = new Vector2(1, 1);
-        cRect.pivot     = new Vector2(0.5f, 1);
-        cRect.anchoredPosition = Vector2.zero;
-        cRect.sizeDelta = Vector2.zero;
-
-        scroll.viewport = viewport.GetComponent<RectTransform>();
-        scroll.content  = cRect;
-
-        return root;
-    }
-
-    private static void AddVerticalListGroup(Transform content)
-    {
-        var vlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.SetParent(viewportGO.transform, false);
+        contentRT.anchorMin = new Vector2(0, 1);
+        contentRT.anchorMax = new Vector2(0, 1);
+        contentRT.pivot     = new Vector2(0, 1);
+        contentRT.anchoredPosition = Vector2.zero;
+        contentRT.sizeDelta = new Vector2(contentW, 0);
+        var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = false;
+        vlg.childForceExpandHeight = false;
         vlg.spacing = 0;
         vlg.padding = new RectOffset(0, 0, 0, 0);
-        vlg.childForceExpandWidth  = true;
-        vlg.childForceExpandHeight = false;
-        vlg.childControlWidth  = true;
-        vlg.childControlHeight = true;
+        var csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
-        var csf = content.gameObject.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-    }
+        var headerGO = new GameObject("Header", typeof(RectTransform), typeof(Image),
+            typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+        headerGO.transform.SetParent(contentGO.transform, false);
+        headerGO.GetComponent<Image>().color = new Color(0.88f, 0.88f, 0.88f);
+        var hlg = headerGO.GetComponent<HorizontalLayoutGroup>();
+        hlg.childControlWidth = true;
+        hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = true;
+        hlg.spacing = 0;
+        hlg.padding = new RectOffset(0, 0, 0, 0);
+        var hle = headerGO.GetComponent<LayoutElement>();
+        hle.preferredHeight = RowH;
+        hle.minHeight = RowH;
 
-    private static GameObject MakeTableRowPrefab(string name, float[] widths, float rowHeight)
-    {
-        if (!Directory.Exists(PrefabsFolder)) Directory.CreateDirectory(PrefabsFolder);
-
-        var root = CreateUI(name, null);
-        var rt = root.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, rowHeight);
-
-        var img = root.AddComponent<Image>();
-        img.color = new Color(0, 0, 0, 0.03f);
-        root.AddComponent<Button>();
-
-        var le = root.AddComponent<LayoutElement>();
-        le.minHeight = rowHeight;
-        le.preferredHeight = rowHeight;
-
-        float offset = 4;
-        var cells = new TMP_Text[widths.Length];
-        for (int i = 0; i < widths.Length; i++)
+        for (int i = 0; i < headers.Length; i++)
         {
-            var cellGO = CreateUI("Cell" + i, root.transform);
-            var cr = cellGO.GetComponent<RectTransform>();
-            cr.anchorMin = new Vector2(0, 0);
-            cr.anchorMax = new Vector2(0, 1);
-            cr.pivot     = new Vector2(0, 0.5f);
-            cr.anchoredPosition = new Vector2(offset, 0);
-            cr.sizeDelta = new Vector2(widths[i], 0);
-
-            var t = cellGO.AddComponent<TextMeshProUGUI>();
-            t.text = "";
-            t.color = Color.black;
-            t.fontSize = 11;
-            t.alignment = TextAlignmentOptions.MidlineLeft;
-            t.enableWordWrapping = false;
-            t.overflowMode = TextOverflowModes.Ellipsis;
-
-            cells[i] = t;
-            offset += widths[i];
+            var cellGO = new GameObject("h" + i, typeof(RectTransform), typeof(LayoutElement));
+            cellGO.transform.SetParent(headerGO.transform, false);
+            var cellLe = cellGO.GetComponent<LayoutElement>();
+            cellLe.preferredWidth = widths[i];
+            cellLe.minWidth = widths[i];
+            var tmp = cellGO.AddComponent<TextMeshProUGUI>();
+            tmp.text = headers[i];
+            tmp.fontSize = 11;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.alignment = TextAlignmentOptions.Left;
+            tmp.color = Color.black;
+            tmp.enableWordWrapping = false;
+            tmp.overflowMode = TextOverflowModes.Ellipsis;
+            tmp.margin = new Vector4(4, 0, 2, 0);
+            tmp.raycastTarget = false;
         }
 
-        var ui = root.AddComponent<TableRowUI>();
-        ui.cells = cells;
-        ui.background = img;
-        ui.normalColor   = new Color(0, 0, 0, 0.03f);
-        ui.selectedColor = new Color(0.2f, 0.6f, 1f, 0.35f);
+        var sr = root.GetComponent<ScrollRect>();
+        sr.content = contentRT;
+        sr.viewport = viewportRT;
+        sr.horizontal = true;
+        sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
 
-        var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/" + name + ".prefab");
-        Object.DestroyImmediate(root);
-        AssetDatabase.Refresh();
-        return prefab;
+        return contentRT;
     }
 
-    // ================================================================
-    //  Helpers
-    // ================================================================
-    private static void StretchFull(GameObject go)
+    private static TextMeshProUGUI CreateListBox(Transform parent, string name,
+        float x, float y, float w, float h)
     {
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-    }
+        var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+        var rt = root.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot     = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        root.GetComponent<Image>().color = Color.white;
 
-    private static void DestroyIfExists(string name)
-    {
-        var go = GameObject.Find(name);
-        if (go != null) Object.DestroyImmediate(go);
-    }
+        var sr = root.GetComponent<ScrollRect>();
+        sr.horizontal = false;
+        sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
 
-    private static void EnsureEventSystem()
-    {
-        if (Object.FindObjectOfType<EventSystem>() != null) return;
-        var es = new GameObject("EventSystem");
-        es.AddComponent<EventSystem>();
-        es.AddComponent<StandaloneInputModule>();
-    }
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        viewportRT.SetParent(root.transform, false);
+        viewportRT.anchorMin = Vector2.zero;
+        viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = new Vector2(1, 1);
+        viewportRT.offsetMax = new Vector2(-1, -1);
+        viewportGO.GetComponent<Image>().color = new Color(1, 1, 1, 0.01f);
+        viewportGO.GetComponent<Mask>().showMaskGraphic = false;
 
-    private static GameObject CreateUI(string name, Transform parent)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        if (parent != null) go.transform.SetParent(parent, false);
-        return go;
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.SetParent(viewportGO.transform, false);
+        contentRT.anchorMin = new Vector2(0, 1);
+        contentRT.anchorMax = new Vector2(1, 1);
+        contentRT.pivot     = new Vector2(0.5f, 1);
+        contentRT.anchoredPosition = Vector2.zero;
+        contentRT.sizeDelta = Vector2.zero;
+
+        var tmp = contentGO.AddComponent<TextMeshProUGUI>();
+        tmp.fontSize = 11;
+        tmp.color = Color.black;
+        tmp.alignment = TextAlignmentOptions.TopLeft;
+        tmp.enableWordWrapping = false;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.margin = new Vector4(2, 2, 2, 2);
+
+        var csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        sr.content = contentRT;
+        sr.viewport = viewportRT;
+
+        return tmp;
     }
 }
 #endif
