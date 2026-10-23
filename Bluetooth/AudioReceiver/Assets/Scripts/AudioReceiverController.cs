@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting;
 using UnityEngine.UI;
 using TMPro;
 
 using wclCommon;
 using wclAudio;
 
+[Preserve]
 public class AudioReceiverController : MonoBehaviour
 {
     [Header("Buttons")]
@@ -48,21 +50,35 @@ public class AudioReceiverController : MonoBehaviour
         if (btClose)   btClose.onClick.AddListener(OnCloseClick);
         if (btConnect) btConnect.onClick.AddListener(OnConnectClick);
         if (btClear)   btClear.onClick.AddListener(OnClearClick);
+
+        if (lvDevicesContent == null && lvDevicesScroll != null)
+            lvDevicesContent = lvDevicesScroll.content;
+
+        if (lvDevicesContent == null)
+            Debug.LogError("[AudioReceiver] lvDevicesContent is null. Rebuild the scene via Tools > AudioReceiver > Build Scene.");
     }
 
     private void Start()
     {
-        AudioWatcher = new wclBluetoothAudioWatcher();
-        AudioWatcher.OnDeviceAdded   += AudioWatcherDeviceAdded;
-        AudioWatcher.OnDeviceRemoved += AudioWatcherDeviceRemoved;
-        AudioWatcher.OnStarted       += AudioWatcherStarted;
-        AudioWatcher.OnStopped       += AudioWatcherStopped;
+        try
+        {
+            AudioWatcher = new wclBluetoothAudioWatcher();
+            AudioWatcher.OnDeviceAdded   += AudioWatcherDeviceAdded;
+            AudioWatcher.OnDeviceRemoved += AudioWatcherDeviceRemoved;
+            AudioWatcher.OnStarted       += AudioWatcherStarted;
+            AudioWatcher.OnStopped       += AudioWatcherStopped;
 
-        AudioReceiver = new wclBluetoothAudioReceiver();
-        AudioReceiver.OnClosed       += AudioReceiver_OnClosed;
-        AudioReceiver.OnListen       += AudioReceiver_OnListen;
-        AudioReceiver.OnConnected    += AudioReceiver_OnConnected;
-        AudioReceiver.OnDisconnected += AudioReceiver_OnDisconnected;
+            AudioReceiver = new wclBluetoothAudioReceiver();
+            AudioReceiver.OnClosed       += AudioReceiver_OnClosed;
+            AudioReceiver.OnListen       += AudioReceiver_OnListen;
+            AudioReceiver.OnConnected    += AudioReceiver_OnConnected;
+            AudioReceiver.OnDisconnected += AudioReceiver_OnDisconnected;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+            AddLog("Framework init failed: " + ex.Message);
+        }
     }
 
     private void OnDestroy()
@@ -73,6 +89,7 @@ public class AudioReceiverController : MonoBehaviour
 
     private void OnStartClick()
     {
+        if (AudioWatcher == null) { AddLog("Watcher is not initialized"); return; }
         int Res = AudioWatcher.Start();
         if (Res != wclErrors.WCL_E_SUCCESS)
             AddLog("Watcher start failed: 0x" + Res.ToString("X8"));
@@ -80,6 +97,7 @@ public class AudioReceiverController : MonoBehaviour
 
     private void OnStopClick()
     {
+        if (AudioWatcher == null) { AddLog("Watcher is not initialized"); return; }
         int Res = AudioWatcher.Stop();
         if (Res != wclErrors.WCL_E_SUCCESS)
             AddLog("Watcher stop failed: 0x" + Res.ToString("X8"));
@@ -87,6 +105,7 @@ public class AudioReceiverController : MonoBehaviour
 
     private void OnOpenClick()
     {
+        if (AudioReceiver == null) { AddLog("Receiver is not initialized"); return; }
         if (selectedRow == null)
         {
             AddLog("Select device");
@@ -101,6 +120,7 @@ public class AudioReceiverController : MonoBehaviour
 
     private void OnCloseClick()
     {
+        if (AudioReceiver == null) { AddLog("Receiver is not initialized"); return; }
         int Res = AudioReceiver.Close();
         if (Res != wclErrors.WCL_E_SUCCESS)
             AddLog("Close failed: 0x" + Res.ToString("X8"));
@@ -108,6 +128,7 @@ public class AudioReceiverController : MonoBehaviour
 
     private void OnConnectClick()
     {
+        if (AudioReceiver == null) { AddLog("Receiver is not initialized"); return; }
         int Res = AudioReceiver.Connect();
         if (Res != wclErrors.WCL_E_SUCCESS)
             AddLog("Connect failed: 0x" + Res.ToString("X8"));
@@ -170,7 +191,11 @@ public class AudioReceiverController : MonoBehaviour
 
     private void AddDeviceRow(string id, string name)
     {
-        if (lvDevicesContent == null) return;
+        if (lvDevicesContent == null)
+        {
+            Debug.LogWarning("[AudioReceiver] lvDevicesContent is null, row not added: " + id);
+            return;
+        }
 
         var rowGO = new GameObject("Row_" + id, typeof(RectTransform), typeof(Image), typeof(Button));
         rowGO.transform.SetParent(lvDevicesContent, false);

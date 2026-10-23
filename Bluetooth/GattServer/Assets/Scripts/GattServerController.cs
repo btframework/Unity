@@ -463,9 +463,9 @@ public class GattServerController : MonoBehaviour
         FServer.OnRead += new wclGattLocalCharacteristicReadEvent(GattServerRead);
 
         for (UInt32 i = 0; i < SHORT_DATA_LEN; i++)
-            ShortData[i] = wclHelpers.LoByte(wclHelpers.LoWord(i + 1));
+            ShortData[i] = (Byte)(i + 1);
         for (UInt32 i = 0; i < LONG_DATA_LEN; i++)
-            LongData[i] = wclHelpers.LoByte(wclHelpers.LoWord(i));
+            LongData[i] = (Byte)i;
     }
 
     private void Update()
