@@ -22,7 +22,6 @@ Native calls into the Bluetooth Framework are performed from the main thread ins
 
 | Example | Reference article | Framework classes | What it demonstrates |
 |---------|-------------------|-------------------|----------------------|
-| **BleSniffer** | [blesniffer.htm](https://www.btframework.com/blesniffer.htm) | `wclBleSniffer` | Capturing and decoding raw Bluetooth LE frames with a CC2540 USB dongle |
 | **BluetoothManager** | [bluetooth_howto.htm](https://www.btframework.com/bluetooth_howto.htm) | `wclBluetoothManager`, `wclBluetoothRadio`, `wclPowerEventsMonitor` | Radio enumeration, device discovery, pairing, services, virtual COM ports |
 | **AudioSwitcher** | [bluetoothaudio.htm](https://www.btframework.com/bluetoothaudio.htm) | `wclAudioSwitcher` | Enumerating audio devices, switching the system default, reconnecting paired devices, per-service disconnect |
 | **AudioReceiver** | [bluetoothaudio.htm](https://www.btframework.com/bluetoothaudio.htm) | `wclBluetoothAudioWatcher`, `wclBluetoothAudioReceiver` | Turning the PC into an A2DP audio receiver |
@@ -48,7 +47,6 @@ Every example has a dedicated `README.md` next to its scripts describing the API
   - Product page: https://www.btframework.com/bluetoothframework.htm
   - Installation guide: https://www.btframework.com/howtoinstall.htm
 - **Platform:** Windows. A few examples additionally require specific Windows versions or hardware:
-  - **BleSniffer** requires a CC2540 USB dongle with the WinUSB driver installed.
   - **GattClient** requires Windows 10 1703 or newer for direct in-app discovery. Older Windows versions require the peripheral to be paired first through Windows UI.
   - **GattServer** requires Windows 10 version 1703 or newer with the Microsoft Bluetooth driver, or a BLED112 USB dongle.
   - **Beacons**, when extended advertisement is enabled, requires a Bluetooth 5 radio and Windows 10 or newer with the Microsoft Bluetooth driver.
@@ -121,7 +119,6 @@ The scene builder is wrapped in `#if UNITY_EDITOR` and has no runtime footprint.
 - **Reference articles:**
   - BLE Advertisement: https://www.btframework.com/blebeacon.htm
   - BLE Extended Advertisement: https://www.btframework.com/bleextadv.htm
-  - BLE Sniffer: https://www.btframework.com/blesniffer.htm
   - BLE GATT Communication: https://www.btframework.com/gatt.htm
   - BLE GATT Server: https://www.btframework.com/gattserver.htm
   - GATT Connection State Change Detection: https://www.btframework.com/gattclientconnection.htm

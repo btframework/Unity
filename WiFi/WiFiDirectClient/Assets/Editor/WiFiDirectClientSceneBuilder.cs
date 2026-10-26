@@ -1,573 +1,494 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using System.IO;
-using TMPro;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.EventSystems;
+using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
 
 public static class WiFiDirectClientSceneBuilder
 {
-    private const string PrefabsFolder = "Assets/Prefabs";
+    private const float FormWidth  = 413f;
+    private const float FormHeight = 472f;
+    private const string ScenePath = "Assets/Scenes/WiFiDirectClient.unity";
 
-    // ClientSize = 413 x 472
-    private const float CanvasW = 433f;
-    private const float CanvasH = 500f;
-
-    [MenuItem("Tools/WiFi Direct Client/Build Scene")]
+    [MenuItem("Tools/WiFiDirectClient/Build Scene")]
     public static void BuildScene()
     {
-        DestroyIfExists("WiFiDirectClientUI");
-        DestroyIfExists("WiFiDirectClientDemo");
-        DestroyIfExists("EventSystem");
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        EnsureEventSystem();
+        var camGO = new GameObject("Main Camera");
+        camGO.tag = "MainCamera";
+        var cam = camGO.AddComponent<Camera>();
+        cam.orthographic = true;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0.94f, 0.94f, 0.94f);
+        camGO.transform.position = new Vector3(0, 0, -10);
 
-        var canvasGO = CreateUI("WiFiDirectClientUI", null);
-        var canvas = canvasGO.AddComponent<Canvas>();
+        var esGO = new GameObject("EventSystem");
+        esGO.AddComponent<EventSystem>();
+        esGO.AddComponent<StandaloneInputModule>();
+
+        var canvasGO = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        var canvas = canvasGO.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-        var scaler = canvasGO.AddComponent<CanvasScaler>();
+        var scaler = canvasGO.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(CanvasW, CanvasH);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.referenceResolution = new Vector2(FormWidth, FormHeight);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 1f;
 
-        canvasGO.AddComponent<GraphicRaycaster>();
+        CreatePanel(canvasGO.transform, "FormBackground", 0, 0, FormWidth, FormHeight,
+            new Color(0.94f, 0.94f, 0.94f));
 
         var root = canvasGO.transform;
 
-        // ============================================================
-        //  Row 1: Discover | Terminate | Enum paired | Is Paired | Unpair
-        // ============================================================
-        var btDiscover    = MakeButton("BtDiscover",    "Discover",    root, 12,  12, 58, 23);
-        var btTerminate   = MakeButton("BtTerminate",   "Terminate",   root, 76,  12, 62, 23);
-        var btEnumPaired  = MakeButton("BtEnumPaired",  "Enum paired", root, 144, 12, 75, 23);
-        var btIsPaired    = MakeButton("BtIsPaired",    "Is Paired",   root, 225, 12, 56, 23);
-        var btUnpair      = MakeButton("BtUnpair",      "Unpair",      root, 287, 12, 47, 23);
+        // Row 1
+        var btDiscover   = CreateButton(root, "btDiscover",   "Discover",   12,  12, 58, 23);
+        var btTerminate  = CreateButton(root, "btTerminate",  "Terminate",  76,  12, 62, 23);
+        var btEnumPaired = CreateButton(root, "btEnumPaired", "Enum paired",144, 12, 75, 23);
+        var btIsPaired   = CreateButton(root, "btIsPaired",   "Is Paired",  225, 12, 56, 23);
+        var btUnpair     = CreateButton(root, "btUnpair",     "Unpair",     287, 12, 47, 23);
 
-        // ============================================================
-        //  Devices table (12, 41) 390x115, columns 150 | 200
-        // ============================================================
-        var devWidths  = new[] { 150f, 200f };
-        var devHeaders = new[] { "Name", "ID" };
+        // lvDevices
+        var lvDevicesContent = CreateListView(root, "lvDevices", 12, 41, 390, 115,
+            new[] { "Name", "ID" },
+            new float[] { 150f, 200f });
 
-        MakeHeaderBar("DevicesHeader", root, 12, 41, 390, 20, devWidths, devHeaders);
+        // Row 3 - Group owner intent / pairing params
+        CreateLabel(root, "laGroupOwnerIntent", "Group owner intent", 12, 165, 97, 13);
+        var edGroupOwnerIntent = CreateInputField(root, "edGroupOwnerIntent", "14", 115, 162, 53, 20);
 
-        var devicesScroll  = MakeScrollView("DevicesScroll", root, 12, 61, 390, 95, false);
-        var devicesContent = devicesScroll.transform.Find("Viewport/Content");
-        AddVerticalListGroup(devicesContent);
+        CreateLabel(root, "laPairingProcedure", "Pairing procedure", 12, 191, 90, 13);
+        var cbPairingProcedure = CreateDropdown(root, "cbPairingProcedure",
+            new[] { "ppInvitation", "ppGroupOwnerNegotiation" }, 115, 188, 132, 21, 0);
 
-        // ============================================================
-        //  Row 2: Group owner intent / Pairing procedure / PIN toggles
-        //  laGroupOwnerIntent (12, 165)  97x13
-        //  edGroupOwnerIntent (115, 162) 53x20
-        //  laPairingProcedure (12, 191)  90x13
-        //  cbPairingProcedure (115, 188) 132x21
-        //  cbDisplayPIN (321, 161) 81x17
-        //  cbProvidePIN (319, 184) 83x17
-        //  cbPushButton (318, 207) 84x17
-        // ============================================================
-        MakeLabel("LaGroupOwnerIntent", "Group owner intent", root, 12, 165, 97, 13);
-        var edGroupOwnerIntent = MakeInputField("EdGroupOwnerIntent", root, 115, 162, 53, 20, "14");
+        var cbDisplayPIN  = CreateCheckBox(root, "cbDisplayPIN",  "Display PIN",  321, 161, 81, 17, false, true);
+        var cbProvidePIN  = CreateCheckBox(root, "cbProvidePIN",  "Provide PIN",  319, 184, 83, 17, false, true);
+        var cbPushButton  = CreateCheckBox(root, "cbPushButton",  "Push Button",  318, 207, 84, 17, true,  true);
 
-        MakeLabel("LaPairingProcedure", "Pairing procedure", root, 12, 191, 90, 13);
-        var ddPairingProcedure = MakeDropdown("DdPairingProcedure", root, 115, 188, 132, 21,
-            new[] { "ppInvitation", "ppGroupOwnerNegotiation" });
+        // Row 4 - Connect / Disconnect / Clear
+        var btConnect    = CreateButton(root, "btConnect",    "Connect",    15,  230, 75, 23);
+        var btDisconnect = CreateButton(root, "btDisconnect", "Disconnect", 96,  230, 75, 23);
+        var btClear      = CreateButton(root, "btClear",      "Clear",      327, 230, 75, 23);
 
-        var tgDisplayPin = MakeToggle("TgDisplayPin", "Display PIN", root, 321, 159, 81, 17);
-        var tgProvidePin = MakeToggle("TgProvidePin", "Provide PIN", root, 319, 182, 83, 17);
-        var tgPushButton = MakeToggle("TgPushButton", "Push Button", root, 318, 205, 84, 17);
+        // lbLog
+        var lbLogText = CreateListBox(root, "lbLog", 12, 259, 390, 199);
 
-        // ============================================================
-        //  Row 3: Connect | Disconnect | Clear
-        // ============================================================
-        var btConnect    = MakeButton("BtConnect",    "Connect",    root, 15,  230, 75, 23);
-        var btDisconnect = MakeButton("BtDisconnect", "Disconnect", root, 96,  230, 75, 23);
-        var btClear      = MakeButton("BtClear",      "Clear",      root, 327, 230, 75, 23);
+        // Controller
+        var ctrlGO = new GameObject("WiFiDirectClientController");
+        var ctrl = ctrlGO.AddComponent<WiFiDirectClientController>();
 
-        // ============================================================
-        //  Log (12, 259) 390x199
-        // ============================================================
-        var logScroll  = MakeScrollView("LogScroll", root, 12, 259, 390, 199, false);
-        var logContent = logScroll.transform.Find("Viewport/Content");
-        AddVerticalListGroup(logContent);
+        ctrl.btDiscover   = btDiscover.GetComponent<Button>();
+        ctrl.btTerminate  = btTerminate.GetComponent<Button>();
+        ctrl.btEnumPaired = btEnumPaired.GetComponent<Button>();
+        ctrl.btIsPaired   = btIsPaired.GetComponent<Button>();
+        ctrl.btUnpair     = btUnpair.GetComponent<Button>();
+        ctrl.btConnect    = btConnect.GetComponent<Button>();
+        ctrl.btDisconnect = btDisconnect.GetComponent<Button>();
+        ctrl.btClear      = btClear.GetComponent<Button>();
 
-        // ============================================================
-        //  Prefabs
-        // ============================================================
-        var deviceRow = MakeTableRowPrefab("WiFiDirectClientDeviceRow", devWidths, 22f);
-        var logRow    = MakeTableRowPrefab("WiFiDirectClientLogRow", new[] { 380f }, 20f);
+        ctrl.cbDisplayPIN     = cbDisplayPIN;
+        ctrl.cbProvidePIN     = cbProvidePIN;
+        ctrl.cbPushButton     = cbPushButton;
+        ctrl.cbPairingProcedure = cbPairingProcedure;
 
-        // ============================================================
-        //  Main GameObject + links
-        // ============================================================
-        var demoGO = new GameObject("WiFiDirectClientDemo");
-        var demo = demoGO.AddComponent<WiFiDirectClientDemo>();
+        ctrl.edGroupOwnerIntent = edGroupOwnerIntent;
 
-        demo.discoverButton   = btDiscover;
-        demo.terminateButton  = btTerminate;
-        demo.enumPairedButton = btEnumPaired;
-        demo.isPairedButton   = btIsPaired;
-        demo.unpairButton     = btUnpair;
+        ctrl.lvDevicesContent = lvDevicesContent;
+        ctrl.lbLogText        = lbLogText;
 
-        demo.devicesContent  = devicesContent;
-        demo.deviceRowPrefab = deviceRow;
+        Directory.CreateDirectory("Assets/Scenes");
+        EditorSceneManager.MarkSceneDirty(scene);
+        bool saved = EditorSceneManager.SaveScene(scene, ScenePath);
+        if (!saved)
+        {
+            Debug.LogError("[WiFiDirectClient] Failed to save scene: " + ScenePath);
+            return;
+        }
 
-        demo.groupOwnerIntentLabel = null;
-        demo.groupOwnerIntentInput = edGroupOwnerIntent;
-
-        demo.pairingProcedureLabel    = null;
-        demo.pairingProcedureDropdown = ddPairingProcedure;
-
-        demo.displayPinToggle = tgDisplayPin;
-        demo.providePinToggle = tgProvidePin;
-        demo.pushButtonToggle = tgPushButton;
-
-        demo.connectButton    = btConnect;
-        demo.disconnectButton = btDisconnect;
-        demo.clearLogButton   = btClear;
-
-        demo.logContent   = logContent;
-        demo.logRowPrefab = logRow;
-
-        Selection.activeGameObject = demoGO;
-        EditorGUIUtility.PingObject(demoGO);
-
+        AddSceneToBuildSettings(ScenePath);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("Wi-Fi Direct Client Demo UI assembled according to the original layout.");
+        var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
+        Selection.activeObject = sceneAsset;
+        EditorGUIUtility.PingObject(sceneAsset);
+
+        Debug.Log("[WiFiDirectClient] Scene created and saved: " + ScenePath);
     }
 
-    // ================================================================
-    //  Position
-    // ================================================================
-    private static void Place(GameObject go, float x, float y, float w, float h)
+    private static void AddSceneToBuildSettings(string scenePath)
     {
+        var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        for (int i = 0; i < scenes.Count; i++)
+        {
+            if (scenes[i].path == scenePath)
+            {
+                if (!scenes[i].enabled)
+                {
+                    scenes[i] = new EditorBuildSettingsScene(scenePath, true);
+                    EditorBuildSettings.scenes = scenes.ToArray();
+                }
+                return;
+            }
+        }
+        scenes.Add(new EditorBuildSettingsScene(scenePath, true));
+        EditorBuildSettings.scenes = scenes.ToArray();
+    }
+
+    private static GameObject CreatePanel(Transform parent, string name, float x, float y, float w, float h, Color color)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0, 1);
-        rt.anchorMax = new Vector2(0, 1);
-        rt.pivot     = new Vector2(0, 1);
-        rt.anchoredPosition = new Vector2(x, -y);
-        rt.sizeDelta = new Vector2(w, h);
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = color;
+        return go;
     }
 
-    // ================================================================
-    //  Controls
-    // ================================================================
-    private static Button MakeButton(string name, string label, Transform parent,
-        float x, float y, float w, float h)
+    private static GameObject CreateLabel(Transform parent, string name, string text, float x, float y, float w, float h)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        var go = new GameObject(name, typeof(RectTransform));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        var tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = text; tmp.fontSize = 11; tmp.alignment = TextAlignmentOptions.TopLeft;
+        tmp.color = Color.black; tmp.raycastTarget = false;
+        return go;
+    }
 
-        var img = go.AddComponent<Image>();
-        img.color = new Color(0.22f, 0.22f, 0.22f, 1f);
+    private static GameObject CreateButton(Transform parent, string name, string label, float x, float y, float w, float h)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = new Color(0.87f, 0.87f, 0.87f);
 
-        var btn = go.AddComponent<Button>();
+        var btn = go.GetComponent<Button>();
         var c = btn.colors;
-        c.highlightedColor = new Color(0.35f, 0.35f, 0.35f);
-        c.pressedColor     = new Color(0.15f, 0.15f, 0.15f);
+        c.normalColor = Color.white;
+        c.highlightedColor = new Color(0.93f, 0.93f, 0.93f);
+        c.pressedColor = new Color(0.75f, 0.75f, 0.75f);
         btn.colors = c;
 
-        var textGO = CreateUI("Text", go.transform);
-        var text = textGO.AddComponent<TextMeshProUGUI>();
-        text.text = label;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        text.fontSize = 12;
-        StretchFull(textGO);
-        return btn;
+        var txtGO = new GameObject("Text", typeof(RectTransform));
+        txtGO.transform.SetParent(go.transform, false);
+        var txtRT = txtGO.GetComponent<RectTransform>();
+        txtRT.anchorMin = Vector2.zero; txtRT.anchorMax = Vector2.one;
+        txtRT.offsetMin = Vector2.zero; txtRT.offsetMax = Vector2.zero;
+        var tmp = txtGO.AddComponent<TextMeshProUGUI>();
+        tmp.text = label; tmp.fontSize = 11; tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.black; tmp.raycastTarget = false;
+        return go;
     }
 
-    private static Toggle MakeToggle(string name, string label, Transform parent,
-        float x, float y, float w, float h)
+    private static TMP_InputField CreateInputField(Transform parent, string name, string text, float x, float y, float w, float h)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(TMP_InputField));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = Color.white;
 
-        var toggle = go.AddComponent<Toggle>();
+        var textAreaGO = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
+        var textAreaRT = textAreaGO.GetComponent<RectTransform>();
+        textAreaRT.SetParent(go.transform, false);
+        textAreaRT.anchorMin = Vector2.zero; textAreaRT.anchorMax = Vector2.one;
+        textAreaRT.offsetMin = new Vector2(4, 2); textAreaRT.offsetMax = new Vector2(-4, -2);
 
-        var bg = CreateUI("Background", go.transform);
-        var bgRect = bg.GetComponent<RectTransform>();
-        bgRect.anchorMin = new Vector2(0, 0.5f);
-        bgRect.anchorMax = new Vector2(0, 0.5f);
-        bgRect.pivot     = new Vector2(0, 0.5f);
-        bgRect.anchoredPosition = Vector2.zero;
-        bgRect.sizeDelta = new Vector2(13, 13);
-        var bgImg = bg.AddComponent<Image>();
-        bgImg.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+        var placeholderGO = new GameObject("Placeholder", typeof(RectTransform));
+        var placeholderRT = placeholderGO.GetComponent<RectTransform>();
+        placeholderRT.SetParent(textAreaGO.transform, false);
+        placeholderRT.anchorMin = Vector2.zero; placeholderRT.anchorMax = Vector2.one;
+        placeholderRT.offsetMin = Vector2.zero; placeholderRT.offsetMax = Vector2.zero;
+        var placeholderTmp = placeholderGO.AddComponent<TextMeshProUGUI>();
+        placeholderTmp.text = string.Empty; placeholderTmp.fontSize = 11;
+        placeholderTmp.color = new Color(0.5f, 0.5f, 0.5f); placeholderTmp.alignment = TextAlignmentOptions.Left;
+        placeholderTmp.enableWordWrapping = false; placeholderTmp.raycastTarget = false;
 
-        var cm = CreateUI("Checkmark", bg.transform);
-        var cmRect = cm.GetComponent<RectTransform>();
-        cmRect.anchorMin = new Vector2(0.5f, 0.5f);
-        cmRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cmRect.pivot     = new Vector2(0.5f, 0.5f);
-        cmRect.anchoredPosition = Vector2.zero;
-        cmRect.sizeDelta = new Vector2(9, 9);
-        var cmImg = cm.AddComponent<Image>();
-        cmImg.color = new Color(0.05f, 0.05f, 0.05f, 1f);
+        var textGO = new GameObject("Text", typeof(RectTransform));
+        var textRT = textGO.GetComponent<RectTransform>();
+        textRT.SetParent(textAreaGO.transform, false);
+        textRT.anchorMin = Vector2.zero; textRT.anchorMax = Vector2.one;
+        textRT.offsetMin = Vector2.zero; textRT.offsetMax = Vector2.zero;
+        var textTmp = textGO.AddComponent<TextMeshProUGUI>();
+        textTmp.text = text; textTmp.fontSize = 11; textTmp.color = Color.black;
+        textTmp.alignment = TextAlignmentOptions.Left; textTmp.enableWordWrapping = false;
 
-        var lbl = CreateUI("Label", go.transform);
-        var lblRect = lbl.GetComponent<RectTransform>();
-        lblRect.anchorMin = new Vector2(0, 0);
-        lblRect.anchorMax = new Vector2(1, 1);
-        lblRect.offsetMin = new Vector2(17, 0);
-        lblRect.offsetMax = Vector2.zero;
-        var lblText = lbl.AddComponent<TextMeshProUGUI>();
-        lblText.text = label;
-        lblText.color = Color.white;
-        lblText.fontSize = 12;
-        lblText.alignment = TextAlignmentOptions.MidlineLeft;
-        lblText.enableWordWrapping = false;
+        var inputField = go.GetComponent<TMP_InputField>();
+        inputField.targetGraphic = go.GetComponent<Image>();
+        inputField.textViewport = textAreaRT; inputField.textComponent = textTmp;
+        inputField.placeholder = placeholderTmp;
+        inputField.lineType = TMP_InputField.LineType.SingleLine;
+        inputField.text = text;
+        return inputField;
+    }
 
-        toggle.targetGraphic = bgImg;
-        toggle.graphic       = cmImg;
+    private static Toggle CreateCheckBox(Transform parent, string name, string label,
+        float x, float y, float w, float h, bool isOn, bool boxOnRight = false)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Toggle));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+
+        var boxGO = new GameObject("Box", typeof(RectTransform), typeof(Image));
+        var boxRT = boxGO.GetComponent<RectTransform>();
+        boxRT.SetParent(go.transform, false);
+        if (boxOnRight)
+        {
+            boxRT.anchorMin = new Vector2(1, 0.5f); boxRT.anchorMax = new Vector2(1, 0.5f); boxRT.pivot = new Vector2(1, 0.5f);
+        }
+        else
+        {
+            boxRT.anchorMin = new Vector2(0, 0.5f); boxRT.anchorMax = new Vector2(0, 0.5f); boxRT.pivot = new Vector2(0, 0.5f);
+        }
+        boxRT.anchoredPosition = Vector2.zero; boxRT.sizeDelta = new Vector2(13, 13);
+        var boxImg = boxGO.GetComponent<Image>(); boxImg.color = Color.white;
+
+        var checkGO = new GameObject("Check", typeof(RectTransform), typeof(Image));
+        var checkRT = checkGO.GetComponent<RectTransform>();
+        checkRT.SetParent(boxGO.transform, false);
+        checkRT.anchorMin = Vector2.zero; checkRT.anchorMax = Vector2.one;
+        checkRT.offsetMin = new Vector2(2, 2); checkRT.offsetMax = new Vector2(-2, -2);
+        var checkImg = checkGO.GetComponent<Image>(); checkImg.color = new Color(0.2f, 0.2f, 0.2f); checkImg.raycastTarget = false;
+
+        var labelGO = new GameObject("Label", typeof(RectTransform));
+        var labelRT = labelGO.GetComponent<RectTransform>();
+        labelRT.SetParent(go.transform, false);
+        labelRT.anchorMin = Vector2.zero; labelRT.anchorMax = Vector2.one;
+        if (boxOnRight)
+        {
+            labelRT.offsetMin = new Vector2(0, 0); labelRT.offsetMax = new Vector2(-17, 0);
+        }
+        else
+        {
+            labelRT.offsetMin = new Vector2(17, 0); labelRT.offsetMax = Vector2.zero;
+        }
+        var labelTmp = labelGO.AddComponent<TextMeshProUGUI>();
+        labelTmp.text = label; labelTmp.fontSize = 11; labelTmp.color = Color.black;
+        labelTmp.alignment = boxOnRight ? TextAlignmentOptions.Right : TextAlignmentOptions.Left;
+        labelTmp.enableWordWrapping = false; labelTmp.raycastTarget = false;
+
+        var toggle = go.GetComponent<Toggle>();
+        toggle.targetGraphic = boxImg; toggle.graphic = checkImg; toggle.isOn = isOn;
         return toggle;
     }
 
-    private static TMP_Text MakeLabel(string name, string text, Transform parent,
-        float x, float y, float w, float h)
+    private static TMP_Dropdown CreateDropdown(Transform parent, string name, string[] options,
+        float x, float y, float w, float h, int selectedIndex)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(TMP_Dropdown));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = Color.white;
 
-        var t = go.AddComponent<TextMeshProUGUI>();
-        t.text = text;
-        t.color = Color.white;
-        t.fontSize = 12;
-        t.alignment = TextAlignmentOptions.MidlineLeft;
-        t.enableWordWrapping = false;
-        t.overflowMode = TextOverflowModes.Overflow;
-        return t;
+        var labelGO = new GameObject("Label", typeof(RectTransform));
+        labelGO.transform.SetParent(go.transform, false);
+        var labelRT = labelGO.GetComponent<RectTransform>();
+        labelRT.anchorMin = Vector2.zero; labelRT.anchorMax = Vector2.one;
+        labelRT.offsetMin = new Vector2(4, 0); labelRT.offsetMax = new Vector2(-18, 0);
+        var labelTmp = labelGO.AddComponent<TextMeshProUGUI>();
+        labelTmp.fontSize = 11; labelTmp.alignment = TextAlignmentOptions.Left;
+        labelTmp.color = Color.black; labelTmp.raycastTarget = false;
+
+        var arrowGO = new GameObject("Arrow", typeof(RectTransform), typeof(Image));
+        arrowGO.transform.SetParent(go.transform, false);
+        var arrowRT = arrowGO.GetComponent<RectTransform>();
+        arrowRT.anchorMin = new Vector2(1, 0.5f); arrowRT.anchorMax = new Vector2(1, 0.5f); arrowRT.pivot = new Vector2(1, 0.5f);
+        arrowRT.anchoredPosition = new Vector2(-4, 0); arrowRT.sizeDelta = new Vector2(10, 10);
+        arrowGO.GetComponent<Image>().color = new Color(0.35f, 0.35f, 0.35f);
+
+        var templateGO = new GameObject("Template", typeof(RectTransform), typeof(Image), typeof(ScrollRect), typeof(Canvas), typeof(GraphicRaycaster));
+        var templateRT = templateGO.GetComponent<RectTransform>();
+        templateRT.SetParent(go.transform, false);
+        templateRT.anchorMin = new Vector2(0, 0); templateRT.anchorMax = new Vector2(1, 0); templateRT.pivot = new Vector2(0.5f, 1);
+        templateRT.anchoredPosition = new Vector2(0, 2);
+        templateRT.sizeDelta = new Vector2(0, options.Length * 20f + 2f);
+        templateGO.GetComponent<Image>().color = Color.white;
+        var tc = templateGO.GetComponent<Canvas>(); tc.overrideSorting = true; tc.sortingOrder = 30000;
+        templateGO.SetActive(false);
+
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+        viewportGO.transform.SetParent(templateGO.transform, false);
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        viewportRT.anchorMin = Vector2.zero; viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = Vector2.zero; viewportRT.offsetMax = Vector2.zero;
+        viewportGO.GetComponent<Image>().color = new Color(1, 1, 1, 0.01f);
+        viewportGO.GetComponent<Mask>().showMaskGraphic = false;
+
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        contentGO.transform.SetParent(viewportGO.transform, false);
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.anchorMin = new Vector2(0, 1); contentRT.anchorMax = new Vector2(1, 1); contentRT.pivot = new Vector2(0.5f, 1);
+        contentRT.anchoredPosition = Vector2.zero; contentRT.sizeDelta = Vector2.zero;
+        var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+        var csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var itemGO = new GameObject("Item", typeof(RectTransform), typeof(Toggle), typeof(Image));
+        itemGO.transform.SetParent(contentGO.transform, false);
+        var itemRT = itemGO.GetComponent<RectTransform>();
+        itemRT.anchorMin = new Vector2(0, 1); itemRT.anchorMax = new Vector2(1, 1); itemRT.pivot = new Vector2(0.5f, 1);
+        itemRT.anchoredPosition = Vector2.zero; itemRT.sizeDelta = new Vector2(0, 20);
+        var itemImg = itemGO.GetComponent<Image>(); itemImg.color = Color.white;
+        var itemToggle = itemGO.GetComponent<Toggle>(); itemToggle.targetGraphic = itemImg;
+        var itemLe = itemGO.AddComponent<LayoutElement>(); itemLe.preferredHeight = 20;
+
+        var itemBgGO = new GameObject("Item Background", typeof(RectTransform), typeof(Image));
+        itemBgGO.transform.SetParent(itemGO.transform, false);
+        var itemBgRT = itemBgGO.GetComponent<RectTransform>();
+        itemBgRT.anchorMin = Vector2.zero; itemBgRT.anchorMax = Vector2.one;
+        itemBgRT.offsetMin = Vector2.zero; itemBgRT.offsetMax = Vector2.zero;
+        itemBgGO.GetComponent<Image>().color = Color.white;
+
+        var itemLabelGO = new GameObject("Item Label", typeof(RectTransform));
+        itemLabelGO.transform.SetParent(itemGO.transform, false);
+        var itemLabelRT = itemLabelGO.GetComponent<RectTransform>();
+        itemLabelRT.anchorMin = Vector2.zero; itemLabelRT.anchorMax = Vector2.one;
+        itemLabelRT.offsetMin = new Vector2(6, 0); itemLabelRT.offsetMax = new Vector2(-6, 0);
+        var itemLabelTmp = itemLabelGO.AddComponent<TextMeshProUGUI>();
+        itemLabelTmp.fontSize = 11; itemLabelTmp.alignment = TextAlignmentOptions.Left; itemLabelTmp.color = Color.black;
+
+        var sr = templateGO.GetComponent<ScrollRect>();
+        sr.content = contentRT; sr.viewport = viewportRT; sr.horizontal = false; sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
+
+        var dropdown = go.GetComponent<TMP_Dropdown>();
+        dropdown.targetGraphic = go.GetComponent<Image>();
+        dropdown.template = templateRT;
+        dropdown.captionText = labelTmp;
+        dropdown.itemText = itemLabelTmp;
+        dropdown.itemImage = itemBgGO.GetComponent<Image>();
+
+        dropdown.options.Clear();
+        foreach (var opt in options) dropdown.options.Add(new TMP_Dropdown.OptionData(opt));
+        dropdown.value = selectedIndex;
+        dropdown.RefreshShownValue();
+        return dropdown;
     }
 
-    private static TMP_InputField MakeInputField(string name, Transform parent,
-        float x, float y, float w, float h, string defaultText)
+    private static RectTransform CreateListView(Transform parent, string name,
+        float x, float y, float w, float h, string[] headers, float[] widths)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        const float RowH = 18f;
+        var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+        var rt = root.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        root.GetComponent<Image>().color = Color.white;
 
-        var bg = go.AddComponent<Image>();
-        bg.color = Color.white;
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        viewportRT.SetParent(root.transform, false);
+        viewportRT.anchorMin = Vector2.zero; viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = new Vector2(1, 1); viewportRT.offsetMax = new Vector2(-1, -1);
+        viewportGO.GetComponent<Image>().color = new Color(1, 1, 1, 0.01f);
+        viewportGO.GetComponent<Mask>().showMaskGraphic = false;
 
-        var ta = CreateUI("Text Area", go.transform);
-        var taRect = ta.GetComponent<RectTransform>();
-        taRect.anchorMin = Vector2.zero;
-        taRect.anchorMax = Vector2.one;
-        taRect.offsetMin = new Vector2(3, 2);
-        taRect.offsetMax = new Vector2(-3, -2);
+        float totalW = 0;
+        for (int i = 0; i < widths.Length; i++) totalW += widths[i];
 
-        var txt = ta.AddComponent<TextMeshProUGUI>();
-        txt.color = Color.black;
-        txt.fontSize = 12;
-        txt.alignment = TextAlignmentOptions.MidlineLeft;
-        txt.enableWordWrapping = false;
-        txt.overflowMode = TextOverflowModes.Overflow;
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.SetParent(viewportGO.transform, false);
+        contentRT.anchorMin = new Vector2(0, 1); contentRT.anchorMax = new Vector2(0, 1); contentRT.pivot = new Vector2(0, 1);
+        contentRT.anchoredPosition = Vector2.zero; contentRT.sizeDelta = new Vector2(totalW, 0);
 
-        var ph = CreateUI("Placeholder", ta.transform);
-        var phRect = ph.GetComponent<RectTransform>();
-        phRect.anchorMin = Vector2.zero;
-        phRect.anchorMax = Vector2.one;
-        phRect.offsetMin = Vector2.zero;
-        phRect.offsetMax = Vector2.zero;
-        var phT = ph.AddComponent<TextMeshProUGUI>();
-        phT.text = "";
-        phT.color = new Color(0, 0, 0, 0.4f);
-        phT.fontSize = 12;
-        phT.alignment = TextAlignmentOptions.MidlineLeft;
+        var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = false; vlg.childForceExpandHeight = false;
+        vlg.spacing = 0; vlg.padding = new RectOffset(0, 0, 0, 0);
 
-        var input = go.AddComponent<TMP_InputField>();
-        input.textViewport  = taRect;
-        input.textComponent = txt;
-        input.placeholder   = phT;
-        input.targetGraphic = bg;
-        input.text = defaultText;
+        var csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
-        return input;
-    }
+        var headerGO = new GameObject("Header", typeof(RectTransform), typeof(Image),
+            typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+        headerGO.transform.SetParent(contentGO.transform, false);
+        headerGO.GetComponent<Image>().color = new Color(0.88f, 0.88f, 0.88f);
+        var hlg = headerGO.GetComponent<HorizontalLayoutGroup>();
+        hlg.childControlWidth = true; hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = true;
+        hlg.spacing = 0; hlg.padding = new RectOffset(0, 0, 0, 0);
+        var hle = headerGO.GetComponent<LayoutElement>();
+        hle.preferredHeight = RowH; hle.minHeight = RowH;
 
-    private static TMP_Dropdown MakeDropdown(string name, Transform parent,
-        float x, float y, float w, float h, string[] opts)
-    {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
-
-        var bg = go.AddComponent<Image>();
-        bg.color = new Color(0.22f, 0.22f, 0.22f, 1f);
-
-        var dd = go.AddComponent<TMP_Dropdown>();
-
-        var labelGO = CreateUI("Label", go.transform);
-        var label = labelGO.AddComponent<TextMeshProUGUI>();
-        label.text = opts.Length > 0 ? opts[0] : "";
-        label.alignment = TextAlignmentOptions.MidlineLeft;
-        label.color = Color.white;
-        label.fontSize = 12;
-        var lRect = label.rectTransform;
-        lRect.anchorMin = Vector2.zero; lRect.anchorMax = Vector2.one;
-        lRect.offsetMin = new Vector2(8, 0); lRect.offsetMax = new Vector2(-20, 0);
-
-        var arrow = CreateUI("Arrow", go.transform);
-        var arrowImg = arrow.AddComponent<Image>();
-        arrowImg.color = new Color(0.7f, 0.7f, 0.7f, 1f);
-        var aRect = arrow.GetComponent<RectTransform>();
-        aRect.anchorMin = new Vector2(1, 0.5f); aRect.anchorMax = new Vector2(1, 0.5f);
-        aRect.pivot = new Vector2(1, 0.5f);
-        aRect.anchoredPosition = new Vector2(-6, 0);
-        aRect.sizeDelta = new Vector2(10, 10);
-
-        var template = CreateUI("Template", go.transform);
-        var tRect = template.GetComponent<RectTransform>();
-        tRect.anchorMin = new Vector2(0, 0); tRect.anchorMax = new Vector2(1, 0);
-        tRect.pivot = new Vector2(0.5f, 1);
-        tRect.anchoredPosition = new Vector2(0, 2);
-        tRect.sizeDelta = new Vector2(0, 200);
-
-        var tImg = template.AddComponent<Image>();
-        tImg.color = new Color(0.15f, 0.15f, 0.15f, 1f);
-        var tScroll = template.AddComponent<ScrollRect>();
-        tScroll.horizontal = false;
-        var tMask = template.AddComponent<Mask>();
-        tMask.showMaskGraphic = true;
-
-        var viewport = CreateUI("Viewport", template.transform);
-        var vpRect = viewport.GetComponent<RectTransform>();
-        vpRect.anchorMin = Vector2.zero; vpRect.anchorMax = Vector2.one;
-        vpRect.offsetMin = Vector2.zero; vpRect.offsetMax = Vector2.zero;
-        var vpImg = viewport.AddComponent<Image>();
-        vpImg.color = new Color(1, 1, 1, 0.001f);
-        var vpMask = viewport.AddComponent<Mask>();
-        vpMask.showMaskGraphic = false;
-
-        var content = CreateUI("Content", viewport.transform);
-        var cRect = content.GetComponent<RectTransform>();
-        cRect.anchorMin = new Vector2(0, 1); cRect.anchorMax = new Vector2(1, 1);
-        cRect.pivot = new Vector2(0.5f, 1);
-        cRect.anchoredPosition = Vector2.zero;
-        cRect.sizeDelta = new Vector2(0, 22);
-
-        var item = CreateUI("Item", content.transform);
-        var iRect = item.GetComponent<RectTransform>();
-        iRect.anchorMin = new Vector2(0, 0.5f); iRect.anchorMax = new Vector2(1, 0.5f);
-        iRect.pivot = new Vector2(0.5f, 0.5f);
-        iRect.anchoredPosition = Vector2.zero;
-        iRect.sizeDelta = new Vector2(0, 22);
-
-        var itemToggle = item.AddComponent<Toggle>();
-
-        var itemBg = CreateUI("Item Background", item.transform);
-        var ibRect = itemBg.GetComponent<RectTransform>();
-        ibRect.anchorMin = Vector2.zero; ibRect.anchorMax = Vector2.one;
-        ibRect.offsetMin = Vector2.zero; ibRect.offsetMax = Vector2.zero;
-        var ibImg = itemBg.AddComponent<Image>();
-        ibImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-
-        var itemCheck = CreateUI("Item Checkmark", item.transform);
-        var icRect = itemCheck.GetComponent<RectTransform>();
-        icRect.anchorMin = new Vector2(0, 0.5f); icRect.anchorMax = new Vector2(0, 0.5f);
-        icRect.pivot = new Vector2(0, 0.5f);
-        icRect.anchoredPosition = new Vector2(8, 0);
-        icRect.sizeDelta = new Vector2(12, 12);
-        var icImg = itemCheck.AddComponent<Image>();
-        icImg.color = new Color(0.4f, 0.7f, 1f, 1f);
-
-        var itemLabel = CreateUI("Item Label", item.transform);
-        var ilRect = itemLabel.GetComponent<RectTransform>();
-        ilRect.anchorMin = Vector2.zero; ilRect.anchorMax = Vector2.one;
-        ilRect.offsetMin = new Vector2(24, 0); ilRect.offsetMax = new Vector2(-8, 0);
-        var ilText = itemLabel.AddComponent<TextMeshProUGUI>();
-        ilText.text = "Option"; ilText.color = Color.white; ilText.fontSize = 12;
-        ilText.alignment = TextAlignmentOptions.MidlineLeft;
-
-        itemToggle.targetGraphic = ibImg;
-        itemToggle.graphic = icImg;
-
-        tScroll.viewport = vpRect;
-        tScroll.content = cRect;
-
-        dd.template = tRect;
-        dd.captionText = label;
-        dd.itemText = ilText;
-
-        dd.options.Clear();
-        foreach (var o in opts) dd.options.Add(new TMP_Dropdown.OptionData(o));
-        dd.RefreshShownValue();
-
-        template.SetActive(false);
-
-        EditorUtility.SetDirty(dd);
-        EditorUtility.SetDirty(label);
-        EditorUtility.SetDirty(ilText);
-        EditorUtility.SetDirty(go);
-
-        return dd;
-    }
-
-    private static void MakeHeaderBar(string name, Transform parent,
-        float x, float y, float w, float h, float[] widths, string[] headers)
-    {
-        var bar = CreateUI(name, parent);
-        Place(bar, x, y, w, h);
-
-        var bg = bar.AddComponent<Image>();
-        bg.color = new Color(0.18f, 0.18f, 0.18f, 1f);
-
-        float offset = 4;
         for (int i = 0; i < headers.Length; i++)
         {
-            var t = CreateUI("H_" + headers[i], bar.transform);
-            var tRect = t.GetComponent<RectTransform>();
-            tRect.anchorMin = new Vector2(0, 0);
-            tRect.anchorMax = new Vector2(0, 1);
-            tRect.pivot     = new Vector2(0, 0.5f);
-            tRect.anchoredPosition = new Vector2(offset, 0);
-            tRect.sizeDelta = new Vector2(widths[i], 0);
-
-            var tmp = t.AddComponent<TextMeshProUGUI>();
-            tmp.text = headers[i];
-            tmp.color = Color.white;
-            tmp.fontSize = 11;
-            tmp.fontStyle = FontStyles.Bold;
-            tmp.alignment = TextAlignmentOptions.MidlineLeft;
-            tmp.enableWordWrapping = false;
-            tmp.overflowMode = TextOverflowModes.Ellipsis;
-
-            offset += widths[i];
+            var cellGO = new GameObject("h" + i, typeof(RectTransform), typeof(LayoutElement));
+            cellGO.transform.SetParent(headerGO.transform, false);
+            var cellLe = cellGO.GetComponent<LayoutElement>();
+            cellLe.preferredWidth = widths[i]; cellLe.minWidth = widths[i];
+            var tmp = cellGO.AddComponent<TextMeshProUGUI>();
+            tmp.text = headers[i]; tmp.fontSize = 11; tmp.fontStyle = FontStyles.Bold;
+            tmp.alignment = TextAlignmentOptions.Left; tmp.color = Color.black;
+            tmp.enableWordWrapping = false; tmp.overflowMode = TextOverflowModes.Ellipsis;
+            tmp.margin = new Vector4(4, 0, 2, 0); tmp.raycastTarget = false;
         }
+
+        var sr = root.GetComponent<ScrollRect>();
+        sr.content = contentRT; sr.viewport = viewportRT;
+        sr.horizontal = true; sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
+
+        return contentRT;
     }
 
-    private static GameObject MakeScrollView(string name, Transform parent,
-        float x, float y, float w, float h, bool horizontal)
+    private static TextMeshProUGUI CreateListBox(Transform parent, string name, float x, float y, float w, float h)
     {
-        var root = CreateUI(name, parent);
-        Place(root, x, y, w, h);
-
-        var rootImg = root.AddComponent<Image>();
-        rootImg.color = Color.white;
-
-        var scroll = root.AddComponent<ScrollRect>();
-        scroll.horizontal = horizontal;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-
-        var viewport = CreateUI("Viewport", root.transform);
-        StretchFull(viewport);
-        var vpImg = viewport.AddComponent<Image>();
-        vpImg.color = new Color(1, 1, 1, 0.001f);
-        var vpMask = viewport.AddComponent<Mask>();
-        vpMask.showMaskGraphic = false;
-
-        var content = CreateUI("Content", viewport.transform);
-        var cRect = content.GetComponent<RectTransform>();
-        cRect.anchorMin = new Vector2(0, 1);
-        cRect.anchorMax = new Vector2(1, 1);
-        cRect.pivot     = new Vector2(0.5f, 1);
-        cRect.anchoredPosition = Vector2.zero;
-        cRect.sizeDelta = Vector2.zero;
-
-        scroll.viewport = viewport.GetComponent<RectTransform>();
-        scroll.content  = cRect;
-
-        return root;
-    }
-
-    private static void AddVerticalListGroup(Transform content)
-    {
-        var vlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 0;
-        vlg.padding = new RectOffset(0, 0, 0, 0);
-        vlg.childForceExpandWidth  = true;
-        vlg.childForceExpandHeight = false;
-        vlg.childControlWidth  = true;
-        vlg.childControlHeight = true;
-
-        var csf = content.gameObject.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-    }
-
-    private static GameObject MakeTableRowPrefab(string name, float[] widths, float rowHeight)
-    {
-        if (!Directory.Exists(PrefabsFolder)) Directory.CreateDirectory(PrefabsFolder);
-
-        var root = CreateUI(name, null);
+        var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect));
         var rt = root.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, rowHeight);
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        root.GetComponent<Image>().color = Color.white;
 
-        var img = root.AddComponent<Image>();
-        img.color = new Color(0, 0, 0, 0.03f);
-        root.AddComponent<Button>();
+        var sr = root.GetComponent<ScrollRect>();
+        sr.horizontal = false; sr.vertical = true; sr.movementType = ScrollRect.MovementType.Clamped;
 
-        var le = root.AddComponent<LayoutElement>();
-        le.minHeight = rowHeight;
-        le.preferredHeight = rowHeight;
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+        viewportGO.transform.SetParent(root.transform, false);
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        viewportRT.anchorMin = Vector2.zero; viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = new Vector2(1, 1); viewportRT.offsetMax = new Vector2(-1, -1);
+        viewportGO.GetComponent<Image>().color = new Color(1, 1, 1, 0.01f);
+        viewportGO.GetComponent<Mask>().showMaskGraphic = false;
 
-        float offset = 4;
-        var cells = new TMP_Text[widths.Length];
-        for (int i = 0; i < widths.Length; i++)
-        {
-            var cellGO = CreateUI("Cell" + i, root.transform);
-            var cr = cellGO.GetComponent<RectTransform>();
-            cr.anchorMin = new Vector2(0, 0);
-            cr.anchorMax = new Vector2(0, 1);
-            cr.pivot     = new Vector2(0, 0.5f);
-            cr.anchoredPosition = new Vector2(offset, 0);
-            cr.sizeDelta = new Vector2(widths[i], 0);
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        contentGO.transform.SetParent(viewportGO.transform, false);
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.anchorMin = new Vector2(0, 1); contentRT.anchorMax = new Vector2(1, 1); contentRT.pivot = new Vector2(0.5f, 1);
+        contentRT.anchoredPosition = Vector2.zero; contentRT.sizeDelta = Vector2.zero;
 
-            var t = cellGO.AddComponent<TextMeshProUGUI>();
-            t.text = "";
-            t.color = Color.black;
-            t.fontSize = 11;
-            t.alignment = TextAlignmentOptions.MidlineLeft;
-            t.enableWordWrapping = false;
-            t.overflowMode = TextOverflowModes.Ellipsis;
+        var tmp = contentGO.AddComponent<TextMeshProUGUI>();
+        tmp.fontSize = 11; tmp.color = Color.black; tmp.alignment = TextAlignmentOptions.TopLeft;
+        tmp.enableWordWrapping = false; tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.margin = new Vector4(2, 2, 2, 2);
 
-            cells[i] = t;
-            offset += widths[i];
-        }
+        var csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
-        var ui = root.AddComponent<TableRowUI>();
-        ui.cells = cells;
-        ui.background = img;
-        ui.normalColor   = new Color(0, 0, 0, 0.03f);
-        ui.selectedColor = new Color(0.2f, 0.6f, 1f, 0.35f);
+        sr.content = contentRT; sr.viewport = viewportRT;
 
-        var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/" + name + ".prefab");
-        Object.DestroyImmediate(root);
-        AssetDatabase.Refresh();
-        return prefab;
-    }
-
-    // ================================================================
-    //  Misc
-    // ================================================================
-    private static void StretchFull(GameObject go)
-    {
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-    }
-
-    private static void DestroyIfExists(string name)
-    {
-        var go = GameObject.Find(name);
-        if (go != null) Object.DestroyImmediate(go);
-    }
-
-    private static void EnsureEventSystem()
-    {
-        if (Object.FindObjectOfType<EventSystem>() != null) return;
-        var es = new GameObject("EventSystem");
-        es.AddComponent<EventSystem>();
-        es.AddComponent<StandaloneInputModule>();
-    }
-
-    private static GameObject CreateUI(string name, Transform parent)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        if (parent != null) go.transform.SetParent(parent, false);
-        return go;
+        return tmp;
     }
 }
 #endif

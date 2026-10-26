@@ -1,475 +1,358 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using System.IO;
-using TMPro;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.EventSystems;
+using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
 
 public static class WiFiHostedNetworkSceneBuilder
 {
-    private const string PrefabsFolder = "Assets/Prefabs";
+    private const float FormWidth  = 644f;
+    private const float FormHeight = 468f;
+    private const string ScenePath = "Assets/Scenes/WiFiHostedNetwork.unity";
 
-    // ClientSize = 644 x 468
-    private const float CanvasW = 664f;
-    private const float CanvasH = 490f;
-
-    [MenuItem("Tools/WiFi Hosted Network/Build Scene")]
+    [MenuItem("Tools/WiFiHostedNetwork/Build Scene")]
     public static void BuildScene()
     {
-        DestroyIfExists("WiFiHostedNetworkUI");
-        DestroyIfExists("WiFiHostedNetworkDemo");
-        DestroyIfExists("EventSystem");
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        EnsureEventSystem();
+        var camGO = new GameObject("Main Camera");
+        camGO.tag = "MainCamera";
+        var cam = camGO.AddComponent<Camera>();
+        cam.orthographic = true;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = new Color(0.94f, 0.94f, 0.94f);
+        camGO.transform.position = new Vector3(0, 0, -10);
 
-        var canvasGO = CreateUI("WiFiHostedNetworkUI", null);
-        var canvas = canvasGO.AddComponent<Canvas>();
+        var esGO = new GameObject("EventSystem");
+        esGO.AddComponent<EventSystem>();
+        esGO.AddComponent<StandaloneInputModule>();
+
+        var canvasGO = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        var canvas = canvasGO.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-        var scaler = canvasGO.AddComponent<CanvasScaler>();
+        var scaler = canvasGO.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(CanvasW, CanvasH);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.referenceResolution = new Vector2(FormWidth, FormHeight);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 1f;
 
-        canvasGO.AddComponent<GraphicRaycaster>();
+        CreatePanel(canvasGO.transform, "FormBackground", 0, 0, FormWidth, FormHeight,
+            new Color(0.94f, 0.94f, 0.94f));
 
         var root = canvasGO.transform;
 
-        // ============================================================
-        //  Row 1: Open | Close | Clear
-        // ============================================================
-        var btOpen  = MakeButton("BtOpen",  "Open",  root, 12,  12, 75, 23);
-        var btClose = MakeButton("BtClose", "Close", root, 93,  12, 75, 23);
-        var btClear = MakeButton("BtClear", "Clear", root, 202, 12, 75, 23);
+        // Row 1
+        var btHnOpen  = CreateButton(root, "btHnOpen",  "Open",  12,  12, 75, 23);
+        var btHnClose = CreateButton(root, "btHnClose", "Close", 93,  12, 75, 23);
+        var btHnClear = CreateButton(root, "btHnClear", "Clear", 202, 12, 75, 23);
 
-        // ============================================================
-        //  Row 2: Get connection settings | Get key | Get profile |
-        //         Get security settings | Get status | Get state
-        // ============================================================
-        var btGetConnSettings = MakeButton("BtGetConnSettings", "Get Connection Settings", root, 12,  41, 156, 23);
-        var btGetKey          = MakeButton("BtGetKey",          "Get Key",                 root, 174, 41, 75,  23);
-        var btGetProfile      = MakeButton("BtGetProfile",      "Get profile",             root, 255, 41, 75,  23);
-        var btGetSecSettings  = MakeButton("BtGetSecSettings",  "Get security settings",   root, 336, 41, 116, 23);
-        var btGetStatus       = MakeButton("BtGetStatus",       "Get status",              root, 458, 41, 75,  23);
-        var btGetState        = MakeButton("BtGetState",        "Get state",               root, 539, 41, 75,  23);
+        // Row 2
+        var btHnGetConnectionSettings   = CreateButton(root, "btHnGetConnectionSettings",   "Get Connection Settings", 12,  41, 156, 23);
+        var btHnGetKey                  = CreateButton(root, "btHnGetKey",                  "Get Key",                 174, 41, 75,  23);
+        var btHnGetProfile              = CreateButton(root, "btHnGetProfile",              "Get profile",             255, 41, 75,  23);
+        var btHnGetSecuritySettings     = CreateButton(root, "btHnGetSecuritySettings",     "Get security settings",   336, 41, 116, 23);
+        var btHnGetStatus               = CreateButton(root, "btHnGetStatus",               "Get status",              458, 41, 75,  23);
+        var btHnGetState                = CreateButton(root, "btHnGetState",                "Get state",               539, 41, 75,  23);
 
-        // ============================================================
-        //  Data table (12, 70) 620x192, columns 280 | 280
-        // ============================================================
-        var dataWidths  = new[] { 280f, 280f };
-        var dataHeaders = new[] { "Parameter name", "Parameter value" };
+        // lvHnData
+        var lvHnDataContent = CreateListView(root, "lvHnData", 12, 70, 620, 192,
+            new[] { "Parameter name", "Parameter value" },
+            new float[] { 280f, 280f });
 
-        MakeHeaderBar("DataHeader", root, 12, 70, 620, 20, dataWidths, dataHeaders);
+        // Row 3
+        var btHnRefreshSecuritySettings = CreateButton(root, "btHnRefreshSecuritySettings", "Refresh security settings", 12,  277, 143, 23);
+        var btHnRestart                 = CreateButton(root, "btHnRestart",                 "Restart",                  161, 277, 75,  23);
 
-        var dataScroll  = MakeScrollView("DataScroll", root, 12, 90, 620, 172);
-        var dataContent = dataScroll.transform.Find("Viewport/Content");
-        AddVerticalListGroup(dataContent);
+        // Row 4 - SSID / Number of peers
+        CreateLabel(root, "laHnSsid", "SSID", 12, 327, 32, 13);
+        var edSsHnid = CreateInputField(root, "edSsHnid", "MyHostedNetwork", 111, 324, 125, 20);
 
-        // ============================================================
-        //  Row 3: Refresh | Restart
-        // ============================================================
-        var btRefresh = MakeButton("BtRefresh", "Refresh security settings", root, 12,  277, 143, 23);
-        var btRestart = MakeButton("BtRestart", "Restart",                   root, 161, 277, 75,  23);
+        CreateLabel(root, "laHnNumberOfPeers", "Number of peers", 12, 355, 85, 13);
+        var edHnNumberOfPeers = CreateInputField(root, "edHnNumberOfPeers", "5", 111, 352, 100, 20);
 
-        // ============================================================
-        //  Settings: SSID / Number of peers / Set settings
-        //  laHnSsid (12, 327)
-        //  edSsHnid (111, 324) 125x20
-        //  laHnNumberOfPeers (12, 355)
-        //  edHnNumberOfPeers (111, 352) 100x20
-        //  btHnSetSettings (161, 378) 75x23
-        // ============================================================
-        var laSsid = MakeLabel("LaSsid", "SSID", root, 12, 327, 40, 13);
-        var edSsid = MakeInputField("EdSsid", root, 111, 324, 125, 20, "MyHostedNetwork");
+        var btHnSetSettings = CreateButton(root, "btHnSetSettings", "Set settings", 161, 378, 75, 23);
 
-        var laNumPeers = MakeLabel("LaNumPeers", "Number of peers", root, 12, 355, 100, 13);
-        var edNumPeers = MakeInputField("EdNumPeers", root, 111, 352, 100, 20, "5");
+        // Row 4 - Key / Persistent
+        CreateLabel(root, "laHnKey", "Key", 333, 327, 25, 13);
+        var edHnKey = CreateInputField(root, "edHnKey", "123456789", 374, 324, 131, 20);
 
-        var btSetSettings = MakeButton("BtSetSettings", "Set settings", root, 161, 378, 75, 23);
+        var cbHnPersistent = CreateCheckBox(root, "cbHnPersistent", "Persistent", 336, 354, 72, 17, false);
 
-        // ============================================================
-        //  Key / Persistent / Set key
-        //  laHnKey (333, 327)
-        //  edHnKey (374, 324) 131x20
-        //  cbHnPersistent (336, 354)
-        //  btHnSetKey (430, 378) 75x23
-        // ============================================================
-        var laKey = MakeLabel("LaKey", "Key", root, 333, 327, 30, 13);
-        var edKey = MakeInputField("EdKey", root, 374, 324, 131, 20, "123456789");
-        var tgPersistent = MakeToggle("TgPersistent", "Persistent", root, 336, 352, 100, 17);
-        var btSetKey = MakeButton("BtSetKey", "Set key", root, 430, 378, 75, 23);
+        var btHnSetKey = CreateButton(root, "btHnSetKey", "Set key", 430, 378, 75, 23);
 
-        // ============================================================
-        //  Row 4: Enable | Disable
-        // ============================================================
-        var btEnable  = MakeButton("BtEnable",  "Enable",  root, 12, 433, 75, 23);
-        var btDisable = MakeButton("BtDisable", "Disable", root, 93, 433, 75, 23);
+        // Row 5 - Enable / Disable
+        var btHnEnable  = CreateButton(root, "btHnEnable",  "Enable",  12, 433, 75, 23);
+        var btHnDisable = CreateButton(root, "btHnDisable", "Disable", 93, 433, 75, 23);
 
-        // ============================================================
-        //  Prefabs
-        // ============================================================
-        var dataRow = MakeTableRowPrefab("WiFiHostedNetworkDataRow", dataWidths, 22f);
+        // Controller
+        var ctrlGO = new GameObject("WiFiHostedNetworkController");
+        var ctrl = ctrlGO.AddComponent<WiFiHostedNetworkController>();
 
-        // ============================================================
-        //  Main GameObject + links
-        // ============================================================
-        var demoGO = new GameObject("WiFiHostedNetworkDemo");
-        var demo = demoGO.AddComponent<WiFiHostedNetworkDemo>();
+        ctrl.btHnOpen                    = btHnOpen.GetComponent<Button>();
+        ctrl.btHnClose                   = btHnClose.GetComponent<Button>();
+        ctrl.btHnClear                   = btHnClear.GetComponent<Button>();
+        ctrl.btHnGetConnectionSettings   = btHnGetConnectionSettings.GetComponent<Button>();
+        ctrl.btHnGetKey                  = btHnGetKey.GetComponent<Button>();
+        ctrl.btHnGetProfile              = btHnGetProfile.GetComponent<Button>();
+        ctrl.btHnGetSecuritySettings     = btHnGetSecuritySettings.GetComponent<Button>();
+        ctrl.btHnGetStatus               = btHnGetStatus.GetComponent<Button>();
+        ctrl.btHnGetState                = btHnGetState.GetComponent<Button>();
+        ctrl.btHnRefreshSecuritySettings = btHnRefreshSecuritySettings.GetComponent<Button>();
+        ctrl.btHnRestart                 = btHnRestart.GetComponent<Button>();
+        ctrl.btHnSetSettings             = btHnSetSettings.GetComponent<Button>();
+        ctrl.btHnSetKey                  = btHnSetKey.GetComponent<Button>();
+        ctrl.btHnEnable                  = btHnEnable.GetComponent<Button>();
+        ctrl.btHnDisable                 = btHnDisable.GetComponent<Button>();
 
-        demo.openButton  = btOpen;
-        demo.closeButton = btClose;
-        demo.clearButton = btClear;
+        ctrl.edSsHnid          = edSsHnid;
+        ctrl.edHnNumberOfPeers = edHnNumberOfPeers;
+        ctrl.edHnKey           = edHnKey;
 
-        demo.getConnectionSettingsButton = btGetConnSettings;
-        demo.getKeyButton                = btGetKey;
-        demo.getProfileButton            = btGetProfile;
-        demo.getSecuritySettingsButton   = btGetSecSettings;
-        demo.getStatusButton             = btGetStatus;
-        demo.getStateButton              = btGetState;
+        ctrl.cbHnPersistent = cbHnPersistent;
 
-        demo.dataContent  = dataContent;
-        demo.dataRowPrefab = dataRow;
+        ctrl.lvHnDataContent = lvHnDataContent;
 
-        demo.refreshSecuritySettingsButton = btRefresh;
-        demo.restartButton                 = btRestart;
+        Directory.CreateDirectory("Assets/Scenes");
+        EditorSceneManager.MarkSceneDirty(scene);
+        bool saved = EditorSceneManager.SaveScene(scene, ScenePath);
+        if (!saved)
+        {
+            Debug.LogError("[WiFiHostedNetwork] Failed to save scene: " + ScenePath);
+            return;
+        }
 
-        demo.ssidLabel          = laSsid;
-        demo.ssidInput          = edSsid;
-        demo.numberOfPeersLabel = laNumPeers;
-        demo.numberOfPeersInput = edNumPeers;
-        demo.setSettingsButton  = btSetSettings;
-
-        demo.keyLabel        = laKey;
-        demo.keyInput        = edKey;
-        demo.persistentToggle = tgPersistent;
-        demo.setKeyButton    = btSetKey;
-
-        demo.enableButton  = btEnable;
-        demo.disableButton = btDisable;
-
-        Selection.activeGameObject = demoGO;
-        EditorGUIUtility.PingObject(demoGO);
-
+        AddSceneToBuildSettings(ScenePath);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("Wi-Fi Hosted Network Demo UI assembled according to the original layout.");
+        var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
+        Selection.activeObject = sceneAsset;
+        EditorGUIUtility.PingObject(sceneAsset);
+
+        Debug.Log("[WiFiHostedNetwork] Scene created and saved: " + ScenePath);
     }
 
-    // ================================================================
-    //  Position
-    // ================================================================
-    private static void Place(GameObject go, float x, float y, float w, float h)
+    private static void AddSceneToBuildSettings(string scenePath)
     {
+        var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        for (int i = 0; i < scenes.Count; i++)
+        {
+            if (scenes[i].path == scenePath)
+            {
+                if (!scenes[i].enabled)
+                {
+                    scenes[i] = new EditorBuildSettingsScene(scenePath, true);
+                    EditorBuildSettings.scenes = scenes.ToArray();
+                }
+                return;
+            }
+        }
+        scenes.Add(new EditorBuildSettingsScene(scenePath, true));
+        EditorBuildSettings.scenes = scenes.ToArray();
+    }
+
+    private static GameObject CreatePanel(Transform parent, string name, float x, float y, float w, float h, Color color)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0, 1);
-        rt.anchorMax = new Vector2(0, 1);
-        rt.pivot     = new Vector2(0, 1);
-        rt.anchoredPosition = new Vector2(x, -y);
-        rt.sizeDelta = new Vector2(w, h);
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = color;
+        return go;
     }
 
-    // ================================================================
-    //  Controls
-    // ================================================================
-    private static Button MakeButton(string name, string label, Transform parent,
-        float x, float y, float w, float h)
+    private static GameObject CreateLabel(Transform parent, string name, string text, float x, float y, float w, float h)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        var go = new GameObject(name, typeof(RectTransform));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        var tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = text; tmp.fontSize = 11; tmp.alignment = TextAlignmentOptions.TopLeft;
+        tmp.color = Color.black; tmp.raycastTarget = false;
+        return go;
+    }
 
-        var img = go.AddComponent<Image>();
-        img.color = new Color(0.22f, 0.22f, 0.22f, 1f);
+    private static GameObject CreateButton(Transform parent, string name, string label, float x, float y, float w, float h)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = new Color(0.87f, 0.87f, 0.87f);
 
-        var btn = go.AddComponent<Button>();
+        var btn = go.GetComponent<Button>();
         var c = btn.colors;
-        c.highlightedColor = new Color(0.35f, 0.35f, 0.35f);
-        c.pressedColor     = new Color(0.15f, 0.15f, 0.15f);
+        c.normalColor = Color.white;
+        c.highlightedColor = new Color(0.93f, 0.93f, 0.93f);
+        c.pressedColor = new Color(0.75f, 0.75f, 0.75f);
         btn.colors = c;
 
-        var textGO = CreateUI("Text", go.transform);
-        var text = textGO.AddComponent<TextMeshProUGUI>();
-        text.text = label;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        text.fontSize = 11;
-        text.enableWordWrapping = false;
-        StretchFull(textGO);
-        return btn;
+        var txtGO = new GameObject("Text", typeof(RectTransform));
+        txtGO.transform.SetParent(go.transform, false);
+        var txtRT = txtGO.GetComponent<RectTransform>();
+        txtRT.anchorMin = Vector2.zero; txtRT.anchorMax = Vector2.one;
+        txtRT.offsetMin = Vector2.zero; txtRT.offsetMax = Vector2.zero;
+        var tmp = txtGO.AddComponent<TextMeshProUGUI>();
+        tmp.text = label; tmp.fontSize = 11; tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.black; tmp.raycastTarget = false;
+        return go;
     }
 
-    private static Toggle MakeToggle(string name, string label, Transform parent,
-        float x, float y, float w, float h)
+    private static TMP_InputField CreateInputField(Transform parent, string name, string text, float x, float y, float w, float h)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(TMP_InputField));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        go.GetComponent<Image>().color = Color.white;
 
-        var toggle = go.AddComponent<Toggle>();
+        var textAreaGO = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
+        var textAreaRT = textAreaGO.GetComponent<RectTransform>();
+        textAreaRT.SetParent(go.transform, false);
+        textAreaRT.anchorMin = Vector2.zero; textAreaRT.anchorMax = Vector2.one;
+        textAreaRT.offsetMin = new Vector2(4, 2); textAreaRT.offsetMax = new Vector2(-4, -2);
 
-        var bg = CreateUI("Background", go.transform);
-        var bgRect = bg.GetComponent<RectTransform>();
-        bgRect.anchorMin = new Vector2(0, 0.5f);
-        bgRect.anchorMax = new Vector2(0, 0.5f);
-        bgRect.pivot     = new Vector2(0, 0.5f);
-        bgRect.anchoredPosition = Vector2.zero;
-        bgRect.sizeDelta = new Vector2(13, 13);
-        var bgImg = bg.AddComponent<Image>();
-        bgImg.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+        var placeholderGO = new GameObject("Placeholder", typeof(RectTransform));
+        var placeholderRT = placeholderGO.GetComponent<RectTransform>();
+        placeholderRT.SetParent(textAreaGO.transform, false);
+        placeholderRT.anchorMin = Vector2.zero; placeholderRT.anchorMax = Vector2.one;
+        placeholderRT.offsetMin = Vector2.zero; placeholderRT.offsetMax = Vector2.zero;
+        var placeholderTmp = placeholderGO.AddComponent<TextMeshProUGUI>();
+        placeholderTmp.text = string.Empty; placeholderTmp.fontSize = 11;
+        placeholderTmp.color = new Color(0.5f, 0.5f, 0.5f); placeholderTmp.alignment = TextAlignmentOptions.Left;
+        placeholderTmp.enableWordWrapping = false; placeholderTmp.raycastTarget = false;
 
-        var cm = CreateUI("Checkmark", bg.transform);
-        var cmRect = cm.GetComponent<RectTransform>();
-        cmRect.anchorMin = new Vector2(0.5f, 0.5f);
-        cmRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cmRect.pivot     = new Vector2(0.5f, 0.5f);
-        cmRect.anchoredPosition = Vector2.zero;
-        cmRect.sizeDelta = new Vector2(9, 9);
-        var cmImg = cm.AddComponent<Image>();
-        cmImg.color = new Color(0.05f, 0.05f, 0.05f, 1f);
+        var textGO = new GameObject("Text", typeof(RectTransform));
+        var textRT = textGO.GetComponent<RectTransform>();
+        textRT.SetParent(textAreaGO.transform, false);
+        textRT.anchorMin = Vector2.zero; textRT.anchorMax = Vector2.one;
+        textRT.offsetMin = Vector2.zero; textRT.offsetMax = Vector2.zero;
+        var textTmp = textGO.AddComponent<TextMeshProUGUI>();
+        textTmp.text = text; textTmp.fontSize = 11; textTmp.color = Color.black;
+        textTmp.alignment = TextAlignmentOptions.Left; textTmp.enableWordWrapping = false;
 
-        var lbl = CreateUI("Label", go.transform);
-        var lblRect = lbl.GetComponent<RectTransform>();
-        lblRect.anchorMin = new Vector2(0, 0);
-        lblRect.anchorMax = new Vector2(1, 1);
-        lblRect.offsetMin = new Vector2(17, 0);
-        lblRect.offsetMax = Vector2.zero;
-        var lblText = lbl.AddComponent<TextMeshProUGUI>();
-        lblText.text = label;
-        lblText.color = Color.white;
-        lblText.fontSize = 11;
-        lblText.alignment = TextAlignmentOptions.MidlineLeft;
-        lblText.enableWordWrapping = false;
+        var inputField = go.GetComponent<TMP_InputField>();
+        inputField.targetGraphic = go.GetComponent<Image>();
+        inputField.textViewport = textAreaRT; inputField.textComponent = textTmp;
+        inputField.placeholder = placeholderTmp;
+        inputField.lineType = TMP_InputField.LineType.SingleLine;
+        inputField.text = text;
+        return inputField;
+    }
 
-        toggle.targetGraphic = bgImg;
-        toggle.graphic       = cmImg;
+    private static Toggle CreateCheckBox(Transform parent, string name, string label, float x, float y, float w, float h, bool isOn)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Toggle));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+
+        var boxGO = new GameObject("Box", typeof(RectTransform), typeof(Image));
+        var boxRT = boxGO.GetComponent<RectTransform>();
+        boxRT.SetParent(go.transform, false);
+        boxRT.anchorMin = new Vector2(0, 0.5f); boxRT.anchorMax = new Vector2(0, 0.5f); boxRT.pivot = new Vector2(0, 0.5f);
+        boxRT.anchoredPosition = Vector2.zero; boxRT.sizeDelta = new Vector2(13, 13);
+        var boxImg = boxGO.GetComponent<Image>(); boxImg.color = Color.white;
+
+        var checkGO = new GameObject("Check", typeof(RectTransform), typeof(Image));
+        var checkRT = checkGO.GetComponent<RectTransform>();
+        checkRT.SetParent(boxGO.transform, false);
+        checkRT.anchorMin = Vector2.zero; checkRT.anchorMax = Vector2.one;
+        checkRT.offsetMin = new Vector2(2, 2); checkRT.offsetMax = new Vector2(-2, -2);
+        var checkImg = checkGO.GetComponent<Image>(); checkImg.color = new Color(0.2f, 0.2f, 0.2f); checkImg.raycastTarget = false;
+
+        var labelGO = new GameObject("Label", typeof(RectTransform));
+        var labelRT = labelGO.GetComponent<RectTransform>();
+        labelRT.SetParent(go.transform, false);
+        labelRT.anchorMin = Vector2.zero; labelRT.anchorMax = Vector2.one;
+        labelRT.offsetMin = new Vector2(17, 0); labelRT.offsetMax = Vector2.zero;
+        var labelTmp = labelGO.AddComponent<TextMeshProUGUI>();
+        labelTmp.text = label; labelTmp.fontSize = 11; labelTmp.color = Color.black;
+        labelTmp.alignment = TextAlignmentOptions.Left; labelTmp.enableWordWrapping = false;
+        labelTmp.raycastTarget = false;
+
+        var toggle = go.GetComponent<Toggle>();
+        toggle.targetGraphic = boxImg; toggle.graphic = checkImg; toggle.isOn = isOn;
         return toggle;
     }
 
-    private static TMP_Text MakeLabel(string name, string text, Transform parent,
-        float x, float y, float w, float h)
+    private static RectTransform CreateListView(Transform parent, string name,
+        float x, float y, float w, float h, string[] headers, float[] widths)
     {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        const float RowH = 18f;
+        var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+        var rt = root.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y); rt.sizeDelta = new Vector2(w, h);
+        root.GetComponent<Image>().color = Color.white;
 
-        var t = go.AddComponent<TextMeshProUGUI>();
-        t.text = text;
-        t.color = Color.white;
-        t.fontSize = 11;
-        t.alignment = TextAlignmentOptions.MidlineLeft;
-        t.enableWordWrapping = false;
-        t.overflowMode = TextOverflowModes.Overflow;
-        return t;
-    }
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        viewportRT.SetParent(root.transform, false);
+        viewportRT.anchorMin = Vector2.zero; viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = new Vector2(1, 1); viewportRT.offsetMax = new Vector2(-1, -1);
+        viewportGO.GetComponent<Image>().color = new Color(1, 1, 1, 0.01f);
+        viewportGO.GetComponent<Mask>().showMaskGraphic = false;
 
-    private static TMP_InputField MakeInputField(string name, Transform parent,
-        float x, float y, float w, float h, string defaultText)
-    {
-        var go = CreateUI(name, parent);
-        Place(go, x, y, w, h);
+        float totalW = 0;
+        for (int i = 0; i < widths.Length; i++) totalW += widths[i];
 
-        var bg = go.AddComponent<Image>();
-        bg.color = Color.white;
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.SetParent(viewportGO.transform, false);
+        contentRT.anchorMin = new Vector2(0, 1); contentRT.anchorMax = new Vector2(0, 1); contentRT.pivot = new Vector2(0, 1);
+        contentRT.anchoredPosition = Vector2.zero; contentRT.sizeDelta = new Vector2(totalW, 0);
 
-        var ta = CreateUI("Text Area", go.transform);
-        var taRect = ta.GetComponent<RectTransform>();
-        taRect.anchorMin = Vector2.zero;
-        taRect.anchorMax = Vector2.one;
-        taRect.offsetMin = new Vector2(3, 2);
-        taRect.offsetMax = new Vector2(-3, -2);
+        var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = false; vlg.childForceExpandHeight = false;
+        vlg.spacing = 0; vlg.padding = new RectOffset(0, 0, 0, 0);
 
-        var txt = ta.AddComponent<TextMeshProUGUI>();
-        txt.color = Color.black;
-        txt.fontSize = 11;
-        txt.alignment = TextAlignmentOptions.MidlineLeft;
-        txt.enableWordWrapping = false;
-        txt.overflowMode = TextOverflowModes.Overflow;
+        var csf = contentGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
-        var ph = CreateUI("Placeholder", ta.transform);
-        var phRect = ph.GetComponent<RectTransform>();
-        phRect.anchorMin = Vector2.zero;
-        phRect.anchorMax = Vector2.one;
-        phRect.offsetMin = Vector2.zero;
-        phRect.offsetMax = Vector2.zero;
-        var phT = ph.AddComponent<TextMeshProUGUI>();
-        phT.text = "";
-        phT.color = new Color(0, 0, 0, 0.4f);
-        phT.fontSize = 11;
-        phT.alignment = TextAlignmentOptions.MidlineLeft;
+        var headerGO = new GameObject("Header", typeof(RectTransform), typeof(Image),
+            typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+        headerGO.transform.SetParent(contentGO.transform, false);
+        headerGO.GetComponent<Image>().color = new Color(0.88f, 0.88f, 0.88f);
+        var hlg = headerGO.GetComponent<HorizontalLayoutGroup>();
+        hlg.childControlWidth = true; hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = true;
+        hlg.spacing = 0; hlg.padding = new RectOffset(0, 0, 0, 0);
+        var hle = headerGO.GetComponent<LayoutElement>();
+        hle.preferredHeight = RowH; hle.minHeight = RowH;
 
-        var input = go.AddComponent<TMP_InputField>();
-        input.textViewport  = taRect;
-        input.textComponent = txt;
-        input.placeholder   = phT;
-        input.targetGraphic = bg;
-        input.text = defaultText;
-
-        return input;
-    }
-
-    private static void MakeHeaderBar(string name, Transform parent,
-        float x, float y, float w, float h, float[] widths, string[] headers)
-    {
-        var bar = CreateUI(name, parent);
-        Place(bar, x, y, w, h);
-
-        var bg = bar.AddComponent<Image>();
-        bg.color = new Color(0.18f, 0.18f, 0.18f, 1f);
-
-        float offset = 4;
         for (int i = 0; i < headers.Length; i++)
         {
-            var t = CreateUI("H_" + headers[i], bar.transform);
-            var tRect = t.GetComponent<RectTransform>();
-            tRect.anchorMin = new Vector2(0, 0);
-            tRect.anchorMax = new Vector2(0, 1);
-            tRect.pivot     = new Vector2(0, 0.5f);
-            tRect.anchoredPosition = new Vector2(offset, 0);
-            tRect.sizeDelta = new Vector2(widths[i], 0);
-
-            var tmp = t.AddComponent<TextMeshProUGUI>();
-            tmp.text = headers[i];
-            tmp.color = Color.white;
-            tmp.fontSize = 11;
-            tmp.fontStyle = FontStyles.Bold;
-            tmp.alignment = TextAlignmentOptions.MidlineLeft;
-            tmp.enableWordWrapping = false;
-            tmp.overflowMode = TextOverflowModes.Ellipsis;
-
-            offset += widths[i];
-        }
-    }
-
-    private static GameObject MakeScrollView(string name, Transform parent,
-        float x, float y, float w, float h)
-    {
-        var root = CreateUI(name, parent);
-        Place(root, x, y, w, h);
-
-        var rootImg = root.AddComponent<Image>();
-        rootImg.color = Color.white;
-
-        var scroll = root.AddComponent<ScrollRect>();
-        scroll.horizontal = false;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-
-        var viewport = CreateUI("Viewport", root.transform);
-        StretchFull(viewport);
-        var vpImg = viewport.AddComponent<Image>();
-        vpImg.color = new Color(1, 1, 1, 0.001f);
-        var vpMask = viewport.AddComponent<Mask>();
-        vpMask.showMaskGraphic = false;
-
-        var content = CreateUI("Content", viewport.transform);
-        var cRect = content.GetComponent<RectTransform>();
-        cRect.anchorMin = new Vector2(0, 1);
-        cRect.anchorMax = new Vector2(1, 1);
-        cRect.pivot     = new Vector2(0.5f, 1);
-        cRect.anchoredPosition = Vector2.zero;
-        cRect.sizeDelta = Vector2.zero;
-
-        scroll.viewport = viewport.GetComponent<RectTransform>();
-        scroll.content  = cRect;
-
-        return root;
-    }
-
-    private static void AddVerticalListGroup(Transform content)
-    {
-        var vlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 0;
-        vlg.padding = new RectOffset(0, 0, 0, 0);
-        vlg.childForceExpandWidth  = true;
-        vlg.childForceExpandHeight = false;
-        vlg.childControlWidth  = true;
-        vlg.childControlHeight = true;
-
-        var csf = content.gameObject.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-    }
-
-    private static GameObject MakeTableRowPrefab(string name, float[] widths, float rowHeight)
-    {
-        if (!Directory.Exists(PrefabsFolder)) Directory.CreateDirectory(PrefabsFolder);
-
-        var root = CreateUI(name, null);
-        var rt = root.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, rowHeight);
-
-        var img = root.AddComponent<Image>();
-        img.color = new Color(0, 0, 0, 0.03f);
-        root.AddComponent<Button>();
-
-        var le = root.AddComponent<LayoutElement>();
-        le.minHeight = rowHeight;
-        le.preferredHeight = rowHeight;
-
-        float offset = 4;
-        var cells = new TMP_Text[widths.Length];
-        for (int i = 0; i < widths.Length; i++)
-        {
-            var cellGO = CreateUI("Cell" + i, root.transform);
-            var cr = cellGO.GetComponent<RectTransform>();
-            cr.anchorMin = new Vector2(0, 0);
-            cr.anchorMax = new Vector2(0, 1);
-            cr.pivot     = new Vector2(0, 0.5f);
-            cr.anchoredPosition = new Vector2(offset, 0);
-            cr.sizeDelta = new Vector2(widths[i], 0);
-
-            var t = cellGO.AddComponent<TextMeshProUGUI>();
-            t.text = "";
-            t.color = Color.black;
-            t.fontSize = 11;
-            t.alignment = TextAlignmentOptions.MidlineLeft;
-            t.enableWordWrapping = false;
-            t.overflowMode = TextOverflowModes.Ellipsis;
-
-            cells[i] = t;
-            offset += widths[i];
+            var cellGO = new GameObject("h" + i, typeof(RectTransform), typeof(LayoutElement));
+            cellGO.transform.SetParent(headerGO.transform, false);
+            var cellLe = cellGO.GetComponent<LayoutElement>();
+            cellLe.preferredWidth = widths[i]; cellLe.minWidth = widths[i];
+            var tmp = cellGO.AddComponent<TextMeshProUGUI>();
+            tmp.text = headers[i]; tmp.fontSize = 11; tmp.fontStyle = FontStyles.Bold;
+            tmp.alignment = TextAlignmentOptions.Left; tmp.color = Color.black;
+            tmp.enableWordWrapping = false; tmp.overflowMode = TextOverflowModes.Ellipsis;
+            tmp.margin = new Vector4(4, 0, 2, 0); tmp.raycastTarget = false;
         }
 
-        var ui = root.AddComponent<TableRowUI>();
-        ui.cells = cells;
-        ui.background = img;
-        ui.normalColor   = new Color(0, 0, 0, 0.03f);
-        ui.selectedColor = new Color(0.2f, 0.6f, 1f, 0.35f);
+        var sr = root.GetComponent<ScrollRect>();
+        sr.content = contentRT; sr.viewport = viewportRT;
+        sr.horizontal = true; sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
 
-        var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabsFolder + "/" + name + ".prefab");
-        Object.DestroyImmediate(root);
-        AssetDatabase.Refresh();
-        return prefab;
-    }
-
-    // ================================================================
-    //  Misc
-    // ================================================================
-    private static void StretchFull(GameObject go)
-    {
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-    }
-
-    private static void DestroyIfExists(string name)
-    {
-        var go = GameObject.Find(name);
-        if (go != null) Object.DestroyImmediate(go);
-    }
-
-    private static void EnsureEventSystem()
-    {
-        if (Object.FindObjectOfType<EventSystem>() != null) return;
-        var es = new GameObject("EventSystem");
-        es.AddComponent<EventSystem>();
-        es.AddComponent<StandaloneInputModule>();
-    }
-
-    private static GameObject CreateUI(string name, Transform parent)
-    {
-        var go = new GameObject(name, typeof(RectTransform));
-        if (parent != null) go.transform.SetParent(parent, false);
-        return go;
+        return contentRT;
     }
 }
 #endif

@@ -8,4 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Scenes/WiFiDirectSoftAP.unity
+    guid: 9dfa99f8b51267d41b4998d09979dec9
   m_configObjects: {}
+  m_UseUCBPForAssetBundles: 0
